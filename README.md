@@ -20,6 +20,7 @@ analysis/        statistics behind the reported numbers
   organoids/pseudotime/     developmental contrast (same tests as the mouse data)
   organoids/perturbation/   perturbation contrast, enrichment, overlap with the developmental contrast
   blood/           differential site usage, classifiers, within-family analyses
+  pas_distance/    distance of poly(A) sites to the polyadenylation signal, mouse and organoids (Fig. 1B)
 figures/         one notebook per figure panel (or group of panels)
   fig1/  fig2/development/  fig2/perturbation/  fig4/
   style/           shared plotting style and constants (Python and R)
@@ -64,7 +65,7 @@ Below `M26_DATA_ROOT`, the code expects the directory structure of the server on
 | Mouse cell multiplexing (hashtag) assignment, batches 3 and 4 | [[deposited with the GEO record]] | `external/hto_assignment.csv` |
 | Organoid raw reads and metadata | ArrayExpress E-MTAB-13148, Zenodo 8074791 (downloaded by `preprocessing/organoids/01_snakemake_workflow`) | `raw/organoids_knoblich/`, `3utr/organoids/knoblich/` |
 | Blood raw reads, count matrices and participant metadata | controlled access, [[repository and accession]] | `raw/blood/`, `3utr/Blood/` |
-| Reference genomes and annotations | Ensembl release 102 (GRCm38) and 104 (GRCh38); 10x Genomics `refdata-gex-mm10-2020-A` | `common_files/annotations/`, `common_files/indices/`, `common_files/GRCh38_custom`, `references/` |
+| Reference genomes and annotations | Ensembl release 102 (GRCm38) and 104 (GRCh38); 10x Genomics `refdata-gex-mm10-2020-A` | `common_files/genomes/`, `common_files/annotations/`, `common_files/indices/`, `common_files/GRCh38_custom`, `references/` |
 | Gene annotations | SFARI Gene (release 2026-03-22); Ensembl BioMart mouse-human orthologues | `common_files/annotations/` |
 
 Participant-level tables (sample annotations, sibling-pair sheet) are not included. Templates with their column headers are provided (`*_TEMPLATE.csv`).
@@ -77,10 +78,9 @@ Activate the environment named in each step. Shell runners take their settings f
 
 1. `preprocessing/mouse_svz/01_wildtype_mice` (Snakemake; STAR alignment and Cell Ranger), then `02_AggWildtypes` (`cellranger aggr`, command in `_cmdline`).
 2. Notebooks `03` to `05` (`downstr`): quality control, integration, pseudotime and cell states.
-3. `06_map_utrs_after_star` (Snakemake, `utrcalling`): site calling on per-3'UTR coordinates, used for Fig. 1B.
-4. `07_snakemake_pipeline` (Snakemake, `utrcalling`): site calling on the gene-level 3'UTR axis, which gives the site count matrix used everywhere else.
-5. Notebooks `08` to `11` (`downstr`): lineage subset, integration on site counts and proportions, graph smoothing.
-6. `analysis/mouse_svz/` in numbered order:
+3. `06_snakemake_pipeline` (Snakemake, `utrcalling`): site calling on the gene-level 3'UTR axis, which gives the site count matrix used everywhere else.
+4. Notebooks `07` to `10` (`downstr`): lineage subset, integration on site counts and proportions, graph smoothing.
+5. `analysis/mouse_svz/` in numbered order:
    - `01` (`downstr`): effect sizes.
    - `02` (`R_downstream`): Dirichlet-multinomial test. Run `Rscript 02_260401-dirichlet_multinomial_analysis_optimized_2.R <lineage h5ad> --method joint --spline_df 5 --bootstrap 199 --bootstrap_pval 0.1`.
    - `03` and `04` via their runners: permutation test and pseudobulk test.
@@ -89,7 +89,7 @@ Activate the environment named in each step. Shell runners take their settings f
    - `11` and `12`: neurons.
    - `13`: transcriptome vs 3'UTRome (Fig. 1H; it also runs the enrichment of fig. S1K).
    - `14`: confidence intervals of Fig. 1H.
-7. Figure notebooks in `figures/fig1/`.
+6. Figure notebooks in `figures/fig1/`. Fig. 1B needs the distance analysis below.
 
 ### Organoids (Fig. 2, figs. S2 and S3)
 
@@ -100,12 +100,15 @@ Activate the environment named in each step. Shell runners take their settings f
    - `07` to `13`: comparison of tests, effect sizes, ranking, metrics, orthologues, ASD-risk genes.
    - `14` and `15`: enrichment.
    - `16`: W vs expression. Needs step 2 of the perturbation contrast first.
-   - `17`: distance of sites to the polyadenylation signal, organoid vs mouse.
 4. Perturbation contrast, `analysis/organoids/perturbation/`:
    - Runner `01`: DRIMSeq main effect, with the targeting-guide filter.
    - `03`: cell-type-adjusted contrast. Run `Rscript 03_drimseq_treatment_celltype_pseudobulk.R` with the options given in its header.
    - `04` to `10` in order.
 5. Figure notebooks in `figures/fig2/`. Run `development/fig2b_proportions_umap` before `development/supp_3_developmental_landscape`, which reads its cached embedding.
+
+### Distance of poly(A) sites to the polyadenylation signal (Fig. 1B)
+
+`analysis/pas_distance/261007-pas_hexamer_distance_organoid_vs_mouse.ipynb` (`downstr`; it also calls the `utrcalling` environment) uses the final mouse and organoid site matrices and the GRCm38 and GRCh38 genome sequences. It writes the per-site distances that `figures/fig1/fig1b_pas_distance` plots and the organoid-mouse comparison given in the Methods.
 
 ### Blood (Fig. 4, fig. S4)
 
