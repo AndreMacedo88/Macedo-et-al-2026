@@ -2,7 +2,7 @@
 
 This repository contains the code that produces the analyses, numbers and figure panels of
 
-> A. Lopes Martins Macedo et al., [[title]], *Science* [[year, volume, DOI]].
+> A. Lopes Martins Macedo et al., [[title]], [[journal or bioRxiv]] [[year, volume, DOI]].
 
 It covers four data sets: single-cell 3'-end sequencing of the adult mouse ventricular-subventricular zone (Fig. 1, fig. S1), human cortical organoids from the CHOOSE screen (Fig. 2, figs. S2 and S3), post-mortem cortex (Fig. 3) and peripheral blood (Fig. 4, fig. S4).
 
