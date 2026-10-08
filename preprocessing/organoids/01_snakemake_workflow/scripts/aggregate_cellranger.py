@@ -5,6 +5,7 @@ aggr-style, and uses Ensembl gene IDs as var_names. Cell-level metadata is
 not added here; the `annotate_cells` rule handles that downstream so there's
 one canonical join point.
 """
+
 import argparse
 
 import anndata as ad

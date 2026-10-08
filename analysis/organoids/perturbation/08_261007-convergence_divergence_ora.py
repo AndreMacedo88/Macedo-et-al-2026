@@ -45,9 +45,7 @@ import os
 
 DATA_ROOT = os.environ["M26_DATA_ROOT"]  # data directory (see README)
 
-KB = Path(
-    f"{DATA_ROOT}/3utr/organoids/knoblich/utrcalling/dirmult_treatment_results"
-)
+KB = Path(f"{DATA_ROOT}/3utr/organoids/knoblich/utrcalling/dirmult_treatment_results")
 COLLECTIONS = ["Reactome", "GO_BP", "Hallmark", "KEGG"]
 PADJ_CUT = 0.05
 OUT_NAMES = {
@@ -135,9 +133,7 @@ def main() -> None:
     parser.add_argument("--outdir", type=Path, default=KB)
     args = parser.parse_args()
 
-    cd = pd.concat(
-        [merge_collection(args.tier, coll) for coll in COLLECTIONS], ignore_index=True
-    )
+    cd = pd.concat([merge_collection(args.tier, coll) for coll in COLLECTIONS], ignore_index=True)
     args.outdir.mkdir(parents=True, exist_ok=True)
     out = args.outdir / OUT_NAMES[args.tier]
     write_r_csv(cd, out)
@@ -146,10 +142,7 @@ def main() -> None:
     print(f"[{args.tier}] {len(cd)} terms -> {out}")
     print(
         "  "
-        + " | ".join(
-            f"{cl}: {counts.get(cl, 0)}"
-            for cl in ["Convergent", "EXC-only", "INH-only"]
-        )
+        + " | ".join(f"{cl}: {counts.get(cl, 0)}" for cl in ["Convergent", "EXC-only", "INH-only"])
     )
     print(cd.groupby(["collection", "class"]).size().unstack(fill_value=0).to_string())
 

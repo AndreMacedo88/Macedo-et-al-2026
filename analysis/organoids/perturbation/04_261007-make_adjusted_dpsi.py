@@ -105,9 +105,7 @@ def build_units(adata: ad.AnnData, lin: str) -> tuple[pd.DataFrame, np.ndarray]:
         shape=(len(unit_keys), len(inv)),
     )
     counts = (agg @ adata.X[keep]).toarray()
-    induced_by_sample = (
-        pd.Series(induced[keep], index=sample_k).groupby(level=0).first()
-    )
+    induced_by_sample = pd.Series(induced[keep], index=sample_k).groupby(level=0).first()
 
     meta = pd.DataFrame({"sample_id": unit_keys})
     meta["sample_id_root"] = meta["sample_id"].str.replace(r"__bin\d+$", "", regex=True)
@@ -117,9 +115,7 @@ def build_units(adata: ad.AnnData, lin: str) -> tuple[pd.DataFrame, np.ndarray]:
     meta["super_batch"] = meta["sample_id_root"].str[:3]
     meta["n_cells"] = np.bincount(inv)
     keep_units = (meta["n_cells"] >= MIN_CELLS_PER_UNIT).to_numpy()
-    print(
-        f"[{lin}] cells retained {keep.sum()} | units kept {keep_units.sum()} / {len(meta)}"
-    )
+    print(f"[{lin}] cells retained {keep.sum()} | units kept {keep_units.sum()} / {len(meta)}")
     return meta[keep_units].reset_index(drop=True), counts[keep_units]
 
 
@@ -139,9 +135,7 @@ def check_units(meta: pd.DataFrame, lin: str) -> None:
     print(f"[{lin}] units identical to DRIMSeq manifest: {ok}")
 
 
-def adjusted_dpsi(
-    meta: pd.DataFrame, counts: np.ndarray, var: pd.DataFrame
-) -> pd.DataFrame:
+def adjusted_dpsi(meta: pd.DataFrame, counts: np.ndarray, var: pd.DataFrame) -> pd.DataFrame:
     design = meta.assign(induced_i=meta["induced"].astype(int))
     x_full = patsy.dmatrix(DESIGN, design, return_type="dataframe")
     i_ind = list(x_full.columns).index("induced_i")
@@ -166,9 +160,7 @@ def adjusted_dpsi(
         w = (y[ku] / tot[ku, None]) @ rank
         n = n_cells[ku]
 
-        raw = (w[it] * n[it]).sum() / n[it].sum() - (w[~it] * n[~it]).sum() / n[
-            ~it
-        ].sum()
+        raw = (w[it] * n[it]).sum() / n[it].sum() - (w[~it] * n[~it]).sum() / n[~it].sum()
 
         sw = np.sqrt(n)
         a = x_full[ku] * sw[:, None]
@@ -190,9 +182,7 @@ def adjusted_dpsi(
             "adj_wls_p",
         ],
     )
-    out["adj_wls_padj"] = stats.false_discovery_control(
-        out["adj_wls_p"].to_numpy(), method="bh"
-    )
+    out["adj_wls_padj"] = stats.false_discovery_control(out["adj_wls_p"].to_numpy(), method="bh")
     return out.sort_values("gene_id").reset_index(drop=True)
 
 
@@ -215,9 +205,7 @@ def main() -> None:
         meta, counts = build_units(adata, lin)
         check_units(meta, lin)
         res = adjusted_dpsi(meta, counts, var)
-        outdir = (
-            TREAT_DIR / lin / "main_only" if args.outdir is None else args.outdir / lin
-        )
+        outdir = TREAT_DIR / lin / "main_only" if args.outdir is None else args.outdir / lin
         outdir.mkdir(parents=True, exist_ok=True)
         out = outdir / f"delta_psi_treatment_adjusted_{lin}.csv"
         res.to_csv(out, index=False)

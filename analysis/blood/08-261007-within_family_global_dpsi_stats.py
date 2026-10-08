@@ -91,13 +91,9 @@ def summarise(pairs: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument(
-        "--input", type=Path, default=IN_CSV, help="per_pair_global_dpsi.csv"
-    )
+    ap.add_argument("--input", type=Path, default=IN_CSV, help="per_pair_global_dpsi.csv")
     ap.add_argument("--outdir", type=Path, default=RES, help="output directory")
-    ap.add_argument(
-        "--overwrite", action="store_true", help="allow replacing an existing output"
-    )
+    ap.add_argument("--overwrite", action="store_true", help="allow replacing an existing output")
     args = ap.parse_args()
 
     pairs = pd.read_csv(args.input)

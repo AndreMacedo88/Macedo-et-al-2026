@@ -49,12 +49,8 @@ LINEAGES = ["inhibitory", "excitatory"]
 
 
 def overlap_pairs(lin: str) -> pd.DataFrame:
-    ov = pd.read_csv(
-        OVERLAP_DIR / f"overlap_gene_table_{lin}.csv", keep_default_na=False
-    )
-    ov = ov[
-        ov["sig_treat"].astype(str).eq("True") & ov["sig_pseudo"].astype(str).eq("True")
-    ]
+    ov = pd.read_csv(OVERLAP_DIR / f"overlap_gene_table_{lin}.csv", keep_default_na=False)
+    ov = ov[ov["sig_treat"].astype(str).eq("True") & ov["sig_pseudo"].astype(str).eq("True")]
     adj = pd.read_csv(
         TREAT_DIR / lin / "main_only" / f"delta_psi_treatment_adjusted_{lin}.csv",
         keep_default_na=False,
@@ -79,9 +75,7 @@ def overlap_pairs(lin: str) -> pd.DataFrame:
             right_on="gene_name",
         )
     )
-    assert len(pairs) == len(ov), (
-        f"[{lin}] {len(ov) - len(pairs)} overlap genes not matched"
-    )
+    assert len(pairs) == len(ov), f"[{lin}] {len(ov) - len(pairs)} overlap genes not matched"
     pairs["lineage"] = lin
     return pairs[["lineage", "symbol", "delta_psi_treatment_adjusted", "delta_psi_dev"]]
 

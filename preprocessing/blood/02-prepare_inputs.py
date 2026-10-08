@@ -16,13 +16,9 @@ PROCESSINGPATH = os.path.join(BASEPATH, "all_till_20240724/processing/")
 
 bam_paths = []
 for dir_name, preprocess_path in PREPROCESSINGPATH.items():
-    pattern = re.compile(
-        os.path.join(preprocess_path, "star/(.*)/Aligned.sortedByCoord.out.bam")
-    )
+    pattern = re.compile(os.path.join(preprocess_path, "star/(.*)/Aligned.sortedByCoord.out.bam"))
 
-    for root, dirs, files in os.walk(
-        os.path.join(preprocess_path, "star"), followlinks=True
-    ):
+    for root, dirs, files in os.walk(os.path.join(preprocess_path, "star"), followlinks=True):
         for file in files:
             file_path = os.path.join(root, file)
             match = pattern.fullmatch(file_path)
@@ -45,9 +41,7 @@ annotations_file.read_barcodes = annotations_file.read_barcodes.str.split("-").s
 
 sample_ids = set(annotations_file["sample_id"])
 bam_paths = [
-    bam_path
-    for bam_path in bam_paths
-    if any(sample_id in bam_path for sample_id in sample_ids)
+    bam_path for bam_path in bam_paths if any(sample_id in bam_path for sample_id in sample_ids)
 ]
 
 with open(os.path.join(PROCESSINGPATH, "bam_paths.txt"), "w") as f:

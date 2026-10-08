@@ -65,9 +65,7 @@ def rank_weights(gene: np.ndarray, length: np.ndarray) -> np.ndarray:
     r = np.zeros(len(gene))
     for _, idx in pd.DataFrame({"g": gene}).groupby("g").indices.items():
         k = len(idx)
-        r[idx] = (
-            0.0 if k < 2 else (rankdata(length[idx], method="average") - 1) / (k - 1)
-        )
+        r[idx] = 0.0 if k < 2 else (rankdata(length[idx], method="average") - 1) / (k - 1)
     return r
 
 
@@ -92,9 +90,7 @@ def main() -> None:
     dx = a.obs["Diagnosis"].astype(str).to_numpy()
     asd = samples[cur & (dx == "ASD")]
     ctrl = samples[cur & (dx == "CTRL")]
-    print(
-        f"curated n = {cur.sum()} (ASD {len(asd)} / CTRL {len(ctrl)}); genes = {len(set(gene))}"
-    )
+    print(f"curated n = {cur.sum()} (ASD {len(asd)} / CTRL {len(ctrl)}); genes = {len(set(gene))}")
 
     # Delta-psi from raw counts (float64 numerator, float32 integer denominator)
     r = rank_weights(gene, length)
@@ -105,14 +101,10 @@ def main() -> None:
     dpsi = group_delta(w, asd, ctrl).rename("dpsi")
 
     # delta-length in bp from float32 within-gene proportions
-    den_site = (
-        den.loc[gene].to_numpy().T
-    )  # per-site gene total, samples x sites (float32)
+    den_site = den.loc[gene].to_numpy().T  # per-site gene total, samples x sites (float32)
     with np.errstate(invalid="ignore", divide="ignore"):
         prop = np.where(den_site > 0, x / den_site, np.float32(0)).astype(np.float32)
-    num_len = (
-        pd.DataFrame((prop * length[None, :]).T, index=gene).groupby(level=0).sum()
-    )
+    num_len = pd.DataFrame((prop * length[None, :]).T, index=gene).groupby(level=0).sum()
     den_prop = pd.DataFrame(prop.T, index=gene).groupby(level=0).sum()  # float32 sums
     w_len = num_len / den_prop.replace(0, np.nan)
     w_len.columns = samples

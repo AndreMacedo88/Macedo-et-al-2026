@@ -7,6 +7,7 @@ metadata.tsv to determine the Zenodo library name, and writes a samples.tsv
 with semicolon-separated ERR and FASTQ URL lists so multi-lane libraries
 (Batch 1) round-trip through the pipeline.
 """
+
 import argparse
 import re
 import urllib.request
@@ -15,8 +16,7 @@ import pandas as pd
 
 
 SDRF_URL = (
-    "https://ftp.ebi.ac.uk/biostudies/fire/E-MTAB-/148/E-MTAB-13148/Files/"
-    "E-MTAB-13148.sdrf.txt"
+    "https://ftp.ebi.ac.uk/biostudies/fire/E-MTAB-/148/E-MTAB-13148/Files/E-MTAB-13148.sdrf.txt"
 )
 
 STIMULUS_MAP = {
@@ -71,9 +71,7 @@ def main():
     args = parser.parse_args()
 
     meta_libs = set(
-        pd.read_csv(args.metadata, sep="\t", usecols=["library"])["library"]
-        .astype(str)
-        .unique()
+        pd.read_csv(args.metadata, sep="\t", usecols=["library"])["library"].astype(str).unique()
     )
     print(f"Metadata has {len(meta_libs)} unique libraries")
 
@@ -101,8 +99,7 @@ def main():
     unmapped = gex[gex["stimulus"].isna()]
     if len(unmapped) > 0:
         raise ValueError(
-            f"Unknown stimulus values: "
-            f"{unmapped['Characteristics[stimulus]'].unique().tolist()}"
+            f"Unknown stimulus values: {unmapped['Characteristics[stimulus]'].unique().tolist()}"
         )
 
     rows = []
@@ -117,15 +114,17 @@ def main():
             warnings.append(f"library {lib_id}: no match in metadata.tsv; skipping")
             continue
 
-        rows.append({
-            "library_id": lib_id,
-            "metadata_library": metadata_library,
-            "library_name": group["library_name"].iloc[0],
-            "stimulus": group["stimulus"].iloc[0],
-            "batch": group["batch"].iloc[0],
-            "err_accessions": ";".join(errs),
-            "fastq_urls": ";".join(urls),
-        })
+        rows.append(
+            {
+                "library_id": lib_id,
+                "metadata_library": metadata_library,
+                "library_name": group["library_name"].iloc[0],
+                "stimulus": group["stimulus"].iloc[0],
+                "batch": group["batch"].iloc[0],
+                "err_accessions": ";".join(errs),
+                "fastq_urls": ";".join(urls),
+            }
+        )
 
     for w in warnings:
         print(f"  WARNING: {w}")
@@ -133,8 +132,18 @@ def main():
     out = pd.DataFrame(rows).sort_values(["batch", "library_id"]).reset_index(drop=True)
     out.to_csv(args.output, sep="\t", index=False)
     print(f"\nWrote {len(out)} rows to {args.output}")
-    print(out[["library_id", "metadata_library", "library_name",
-               "stimulus", "batch", "err_accessions"]].to_string(index=False))
+    print(
+        out[
+            [
+                "library_id",
+                "metadata_library",
+                "library_name",
+                "stimulus",
+                "batch",
+                "err_accessions",
+            ]
+        ].to_string(index=False)
+    )
 
 
 if __name__ == "__main__":

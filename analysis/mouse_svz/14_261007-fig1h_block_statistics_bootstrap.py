@@ -57,7 +57,9 @@ DATA_ROOT = os.environ["M26_DATA_ROOT"]  # data directory (see README)
 warnings.filterwarnings("ignore")
 
 UTR_DIR = Path(f"{DATA_ROOT}/3utr/wildtypes_analysis/2026_analyses/utrcalling")
-LINEAGE_H5AD = UTR_DIR / "UTR_count_table_genelevel_bw12_above10cts_apa_named_adata_harmony_lineage.h5ad"
+LINEAGE_H5AD = (
+    UTR_DIR / "UTR_count_table_genelevel_bw12_above10cts_apa_named_adata_harmony_lineage.h5ad"
+)
 RAW_H5AD = UTR_DIR / "UTR_count_table_genelevel_bw12_above10cts_apa_named.h5ad"
 DEFAULT_OUTDIR = UTR_DIR / "correlation_analyses_proportions"
 OUT_NAME = "fig1h_block_statistics_bootstrap.csv"
@@ -69,7 +71,9 @@ TOP_N = 1000
 N_BOOT = 500
 SEED = 0
 # Bin majority labels as used in the original analysis (checked against the data below).
-EXPECTED_MAJORITY = ["qNSC1"] * 4 + ["qNSC2"] + ["aNSC1"] * 2 + ["aNSC2"] * 2 + ["TAP"] * 2 + ["NB"] * 9
+EXPECTED_MAJORITY = (
+    ["qNSC1"] * 4 + ["qNSC2"] + ["aNSC1"] * 2 + ["aNSC2"] * 2 + ["TAP"] * 2 + ["NB"] * 9
+)
 STATISTICS = {
     "tap_x_nb": ("TAP", "NB", "mean between-block similarity, TAP bins x NB bins"),
     "qnsc2_x_ansc1": ("qNSC2", "aNSC1", "mean between-block similarity, qNSC2 bins x aNSC1 bins"),
@@ -94,7 +98,11 @@ def build_bin_profiles() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     gene_sites = {g: np.array(v) for g, v in sites_by_gene.items()}
     # within-gene rank of 3'UTR length, scaled to [0, 1] (single-isoform genes -> 0)
     rel_rank = {
-        g: ((rankdata(site_size[i], method="average") - 1) / (len(i) - 1) if len(i) > 1 else np.zeros(len(i)))
+        g: (
+            (rankdata(site_size[i], method="average") - 1) / (len(i) - 1)
+            if len(i) > 1
+            else np.zeros(len(i))
+        )
         for g, i in gene_sites.items()
     }
 
@@ -108,7 +116,9 @@ def build_bin_profiles() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         [pd.Series(celltype[core][bin_of == b]).value_counts().idxmax() for b in range(N_BINS)]
     )
 
-    bin_sums = np.vstack([np.asarray(X_core[bin_of == b].sum(axis=0)).ravel() for b in range(N_BINS)])
+    bin_sums = np.vstack(
+        [np.asarray(X_core[bin_of == b].sum(axis=0)).ravel() for b in range(N_BINS)]
+    )
     lib_size = bin_sums.sum(axis=1)
     W = np.full((len(genes), N_BINS), np.nan)
     E = np.full((len(genes), N_BINS), np.nan)
@@ -193,15 +203,31 @@ def main() -> None:
         for layer, est in point.items():
             lo, hi = np.percentile(reps[layer], [2.5, 97.5])
             rows.append(
-                dict(statistic=k, block_a=a, block_b=b, layer=layer, estimate=est,
-                     ci95_low=lo, ci95_high=hi, n_bins_a=len(blocks[a]), n_bins_b=len(blocks[b]),
-                     n_top_genes=TOP_N, n_boot=N_BOOT, seed=SEED, description=desc)
+                dict(
+                    statistic=k,
+                    block_a=a,
+                    block_b=b,
+                    layer=layer,
+                    estimate=est,
+                    ci95_low=lo,
+                    ci95_high=hi,
+                    n_bins_a=len(blocks[a]),
+                    n_bins_b=len(blocks[b]),
+                    n_top_genes=TOP_N,
+                    n_boot=N_BOOT,
+                    seed=SEED,
+                    description=desc,
+                )
             )
     table = pd.DataFrame(rows)
     args.outdir.mkdir(parents=True, exist_ok=True)
     table.to_csv(out_path, index=False)
     with pd.option_context("display.width", 200):
-        print(table[["statistic", "layer", "estimate", "ci95_low", "ci95_high"]].round(3).to_string(index=False))
+        print(
+            table[["statistic", "layer", "estimate", "ci95_low", "ci95_high"]]
+            .round(3)
+            .to_string(index=False)
+        )
     print(f"wrote {out_path}")
 
 

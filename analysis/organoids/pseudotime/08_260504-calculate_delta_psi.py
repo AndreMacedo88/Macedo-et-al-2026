@@ -35,9 +35,7 @@ from scipy.stats import rankdata
 from tqdm import tqdm
 
 warnings.filterwarnings("ignore", category=sm.tools.sm_exceptions.ConvergenceWarning)
-warnings.filterwarnings(
-    "ignore", category=sm.tools.sm_exceptions.PerfectSeparationWarning
-)
+warnings.filterwarnings("ignore", category=sm.tools.sm_exceptions.PerfectSeparationWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
@@ -316,9 +314,7 @@ def build_design_matrices(
     # Full model: batch + spline
     if has_batch:
         formula_full = f"C(batch) + bs(pseudotime, df={spline_df})"
-        design_full = np.asarray(
-            patsy.dmatrix(formula_full, data=df, return_type="matrix")
-        )
+        design_full = np.asarray(patsy.dmatrix(formula_full, data=df, return_type="matrix"))
         di_full = patsy.dmatrix(formula_full, data=df).design_info
     else:
         design_full = None
@@ -326,9 +322,7 @@ def build_design_matrices(
 
     # No-batch model: spline only
     formula_nobatch = f"bs(pseudotime, df={spline_df})"
-    design_nobatch = np.asarray(
-        patsy.dmatrix(formula_nobatch, data=df, return_type="matrix")
-    )
+    design_nobatch = np.asarray(patsy.dmatrix(formula_nobatch, data=df, return_type="matrix"))
     di_nobatch = patsy.dmatrix(formula_nobatch, data=df).design_info
 
     # Build prediction matrices at grid points
@@ -344,15 +338,11 @@ def build_design_matrices(
                     ),
                 }
             )
-            pred_rows[b] = np.asarray(
-                patsy.build_design_matrices([di_full], df_pred)[0]
-            )
+            pred_rows[b] = np.asarray(patsy.build_design_matrices([di_full], df_pred)[0])
 
     # No-batch prediction
     df_pred_nb = pd.DataFrame({"pseudotime": t_grid})
-    pred_rows["nobatch"] = np.asarray(
-        patsy.build_design_matrices([di_nobatch], df_pred_nb)[0]
-    )
+    pred_rows["nobatch"] = np.asarray(patsy.build_design_matrices([di_nobatch], df_pred_nb)[0])
 
     return design_full, design_nobatch, pred_rows
 
@@ -491,9 +481,7 @@ def main():
     args = parser.parse_args()
 
     n_cores = args.n_cores or max(1, cpu_count() - 1)
-    output_dir = args.output_dir or os.path.join(
-        os.path.dirname(args.input_path), "DirMult"
-    )
+    output_dir = args.output_dir or os.path.join(os.path.dirname(args.input_path), "DirMult")
     os.makedirs(output_dir, exist_ok=True)
 
     # ------------------------------------------------------------------
@@ -537,10 +525,7 @@ def main():
     batch_ids = np.unique(batch)
     has_batch = len(batch_ids) > 1
 
-    print(
-        f"  {adata.n_obs} cells × {adata.n_vars} features, "
-        f"{len(batch_ids)} batch(es)"
-    )
+    print(f"  {adata.n_obs} cells × {adata.n_vars} features, {len(batch_ids)} batch(es)")
 
     # ------------------------------------------------------------------
     # 2. Pseudotime quantiles and grid

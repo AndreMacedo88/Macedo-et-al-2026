@@ -5,6 +5,7 @@ remain sparse on disk. Works on both:
   - Cell Ranger-aggregated h5ads (obs column 'sample', obs_name '<BC>-<N>')
   - utrcalling-merged h5ads       (obs column 'sample_id', obs_name '<BC>-1_<N>')
 """
+
 import argparse
 
 import anndata as ad
@@ -34,7 +35,7 @@ def _normalize_library(lib: str) -> str:
 
 def _extract_bc_core(cell: str, lib: str) -> str:
     prefix = f"{lib}_"
-    trailing = cell[len(prefix):] if cell.startswith(prefix) else cell
+    trailing = cell[len(prefix) :] if cell.startswith(prefix) else cell
     return trailing.rsplit("-", 1)[0]
 
 
@@ -55,9 +56,7 @@ def _extract_keys(adata: ad.AnnData) -> pd.MultiIndex:
     elif "sample" in obs.columns:
         lib = obs["sample"].astype(str)
     else:
-        raise ValueError(
-            "adata.obs must have 'sample' (Cell Ranger) or 'sample_id' (UTR merged)"
-        )
+        raise ValueError("adata.obs must have 'sample' (Cell Ranger) or 'sample_id' (UTR merged)")
     names = pd.Series(obs.index.astype(str), index=obs.index)
     bc_core = names.str.split("_").str[0].str.rsplit("-", n=1).str[0]
     return pd.MultiIndex.from_arrays([lib.values, bc_core.values])
