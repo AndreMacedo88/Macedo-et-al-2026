@@ -86,7 +86,7 @@ rule merge_utr_mappings:
     conda:
         "downstr"
     shell:
-        "python {workflow.basedir}/../../06_map_utrs_after_star/merge_utr_mappings.py {input} -o {output}"
+        "python {workflow.basedir}/merge_utr_mappings.py {input} -o {output}"
 
 
 rule call_peaks:
