@@ -1,0 +1,39 @@
+# Data and results are deposited separately (GEO, controlled access, Zenodo); never commit them
+data/
+results/
+*.h5ad
+*.h5
+*.loom
+*.rds
+*.RData
+*.Rhistory
+*.npz
+*.parquet
+*.bam
+*.bai
+*.cram
+*.fastq
+*.fastq.gz
+*.fq.gz
+*.mtx
+*.mtx.gz
+
+# Participant-level sample sheets (only the *_TEMPLATE.csv headers are tracked)
+preprocessing/blood/annotations.csv
+analysis/blood/samplesheet_inhouse_9pairs.csv
+
+# Figure outputs
+*.png
+*.pdf
+*.svg
+!figures/**/README*.svg
+
+# Workflow and tool state
+.snakemake/
+logs/
+*.log
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.Rproj.user/
+.DS_Store
