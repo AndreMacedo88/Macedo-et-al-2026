@@ -24,7 +24,7 @@
 #   Rscript 09-260703-LOPO_siblings_within_family_common.R
 #   (optional flags: --topk 50 --seed 123 --cores 4 --outdir <dir>)
 # =============================================================================
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressMessages({

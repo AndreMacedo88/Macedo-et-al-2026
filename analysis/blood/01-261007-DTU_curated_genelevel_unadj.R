@@ -72,7 +72,7 @@
 #   (260614-LOBOCV_genelevel_curated_ridge_NOsexadj.R, not included).
 # =============================================================================
 
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressMessages({
@@ -208,4 +208,7 @@ if (!opt$compadj) {
   write_res(res_comp, "compadj", opt$outdir, opt$overwrite)
 }
 
-sessionInfo() |> capture.output() |> head(12) |> cat(sep = "\n")
+sessionInfo() |>
+  capture.output() |>
+  head(12) |>
+  cat(sep = "\n")

@@ -18,7 +18,7 @@
 #
 # Env: conda apa-r.
 # ---------------------------------------------------------------------------
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressMessages({

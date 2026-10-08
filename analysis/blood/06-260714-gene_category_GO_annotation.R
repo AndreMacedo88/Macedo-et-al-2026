@@ -19,7 +19,7 @@
 # (the evidence), so each attribution can be inspected. Genes in none -> "other".
 # Env: conda apa-r. Output: DRIMSeq_allpairs_genewise/gene_category_membership.csv (+ _evidence.csv)
 # =============================================================================
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressMessages({

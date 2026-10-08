@@ -49,7 +49,7 @@
 # (ID, pvalue, p.adjust, Count, geneID) identical to the archived RDS files.
 # =============================================================================
 
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressPackageStartupMessages({
@@ -160,4 +160,7 @@ run_lineage <- function(lin, outdir) {
 opts <- parse_args(commandArgs(trailingOnly = TRUE))
 dir.create(opts$outdir, showWarnings = FALSE, recursive = TRUE)
 for (lin in opts$lineages) run_lineage(lin, opts$outdir)
-sessionInfo() |> capture.output() |> head(3) |> cat(sep = "\n")
+sessionInfo() |>
+  capture.output() |>
+  head(3) |>
+  cat(sep = "\n")

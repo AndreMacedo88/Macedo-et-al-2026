@@ -37,7 +37,7 @@
 # DirMult_optimized/ORA/chisq_perm_intersection/ora_{go,reactome,kegg,hallmark}_neglog10pval_chisqperm.rds;
 # original generating code was not archived.
 
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressPackageStartupMessages({
@@ -85,8 +85,10 @@ perm <- readr::read_csv(perm_path, show_col_types = FALSE) |>
   dplyr::select(utr_name, padj_perm = padj)
 dm2 <- dm2 |> left_join(perm, by = "utr_name")
 dm2$sig_both <- dm2$padj_chisq < alpha & !is.na(dm2$padj_perm) & dm2$padj_perm < alpha
-cat("Converged genes:", nrow(dm2), "| chi-sq sig:", sum(dm2$padj_chisq < alpha),
-    "| chi-sq AND perm sig:", sum(dm2$sig_both), "\n")
+cat(
+  "Converged genes:", nrow(dm2), "| chi-sq sig:", sum(dm2$padj_chisq < alpha),
+  "| chi-sq AND perm sig:", sum(dm2$sig_both), "\n"
+)
 
 # ---- gene ID mappings (identical to the base notebook) ----
 mouse_to_human_genes <- readr::read_csv(ortholog_path, show_col_types = FALSE)
@@ -117,7 +119,11 @@ fg_bg <- function(col) {
     na.omit() |>
     unique() |>
     as.character()
-  bg <- dm2 |> pull({{ col }}) |> na.omit() |> unique() |> as.character()
+  bg <- dm2 |>
+    pull({{ col }}) |>
+    na.omit() |>
+    unique() |>
+    as.character()
   list(fg = fg, bg = bg)
 }
 sym <- fg_bg(gene_symbol)

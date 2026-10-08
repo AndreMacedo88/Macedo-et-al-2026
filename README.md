@@ -46,6 +46,8 @@ conda env create -f environment/apa-r.yml
 conda env create -f environment/apa-utrcalling.yml
 ```
 
+Python code is formatted with ruff (settings in `ruff.toml`) and R code with styler (tidyverse style).
+
 The preprocessing workflows also need Snakemake [[version]], STAR 2.7.9a and samtools 1.11 (created by Snakemake from the `envs/` files with `--use-conda`), and Cell Ranger 6.1.1 (mouse) and 8.0.1 (organoids), which are distributed by 10x Genomics.
 
 ## Data and paths

@@ -22,7 +22,7 @@
 # Repeat 1 (seed 123) is the main partition. CV_WORKERS env var caps BiocParallel workers
 # per process so many partitions can run concurrently without oversubscribing the machine.
 # ---------------------------------------------------------------------------
-DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
+DATA_ROOT <- Sys.getenv("M26_DATA_ROOT") # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 
 suppressMessages({
@@ -441,7 +441,7 @@ if (MODE == "partition") {
   print(head(fs, 15))
 
   rdf <- data.frame(fpr = 1 - ro$specificities, tpr = ro$sensitivities)
-  rdf <- rdf[order(rdf$fpr, rdf$tpr), ]  # correct ROC point order (geom_line sorts by x only -> tied-FPR sawtooth)
+  rdf <- rdf[order(rdf$fpr, rdf$tpr), ] # correct ROC point order (geom_line sorts by x only -> tied-FPR sawtooth)
   ggsave(
     file.path(OUT, "pooled_roc.png"),
     ggplot(rdf, aes(fpr, tpr)) +
@@ -467,7 +467,7 @@ if (MODE == "partition") {
     fpr = 1 - ro_lobo$specificities,
     tpr = ro_lobo$sensitivities
   )
-  rdf_lobo <- rdf_lobo[order(rdf_lobo$fpr, rdf_lobo$tpr), ]  # correct ROC point order
+  rdf_lobo <- rdf_lobo[order(rdf_lobo$fpr, rdf_lobo$tpr), ] # correct ROC point order
   ov <- rbind(
     data.frame(
       fpr = rdf$fpr,
