@@ -11,7 +11,7 @@ Purpose:
 Supports: Fig. 1H numbers quoted in the Results text (e.g. TAP x NB 0.776 vs 0.631,
     diff -0.144 [-0.208, -0.066]; within-NB 0.920 vs 0.773, diff -0.147 [-0.193, -0.106]).
 
-Algorithm (identical to the original scratch analysis):
+Algorithm (same as the original analysis):
     1. Cells of the core lineage (qNSC1, qNSC2, aNSC1, aNSC2, TAP, NB) with finite DPT
        pseudotime are split into 20 equal-count pseudotime bins (quantile edges).
     2. Per bin, raw 3'UTR counts are pseudobulked. For each gene: W = sum over its 3'UTR
@@ -23,7 +23,7 @@ Algorithm (identical to the original scratch analysis):
     5. Block statistics on the bin majority cell-type labels; gene bootstrap resamples the
        top-1000 genes of each layer independently (W first, then E, per replicate).
 
-Inputs (same as 260701-correlations_over_pseudotime.ipynb):
+Inputs (same as 13_260701-correlations_over_pseudotime.ipynb):
     utrcalling/UTR_count_table_genelevel_bw12_above10cts_apa_named_adata_harmony_lineage.h5ad
         (cell types, dpt_pseudotime)
     utrcalling/UTR_count_table_genelevel_bw12_above10cts_apa_named.h5ad
@@ -34,11 +34,10 @@ Output:
     (tidy: one row per statistic x layer, with point estimate and percentile 95% CI)
 
 How to run:
-    conda run -n downstr python 261007-fig1h_block_statistics_bootstrap.py [--outdir DIR] [--overwrite]
+    conda run -n apa-python python 14_261007-fig1h_block_statistics_bootstrap.py [--outdir DIR] [--overwrite]
 
-Reconstructed on 2026-10-07 to reproduce the Fig. 1H block statistics; original code
-recovered from scratch scripts fig1h_boot.py / fig1h_blocks.py / fig1h_relative.py
-(Claude session 3da656c3, 2026-09-03), which printed the values but wrote no file.
+Ported on 2026-10-07 from earlier analysis scripts (2026-09-03) that printed the Fig. 1H
+block statistics but wrote no file.
 """
 
 import argparse

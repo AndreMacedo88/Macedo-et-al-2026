@@ -27,7 +27,7 @@ CATEGORICAL_COLS = {"gRNA", "induced", "celltype"}
 def _normalize_library(lib: str) -> str:
     # Convert metadata.tsv's library value to the pipeline's library_id:
     #   "137116"          → "137116"   (Batch 1)
-    #   "BATCH3_213664"   → "213664"   (Batch 2 — Zenodo mislabels these)
+    #   "BATCH3_213664"   → "213664"   (Batch 2 - Zenodo mislabels these)
     #   "206287_rnacount" → "206287"   (Batch 3)
     return lib.removesuffix("_rnacount").removeprefix("BATCH3_")
 

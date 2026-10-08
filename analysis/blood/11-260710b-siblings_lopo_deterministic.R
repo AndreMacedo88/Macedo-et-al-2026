@@ -1,32 +1,32 @@
 #!/usr/bin/env -S Rscript --vanilla
 # =============================================================================
-# Siblings within-family LOPO: DETERMINISTIC, reproducible pooled AUC (2026-07-10)
+# Siblings within-family LOPO: deterministic, reproducible pooled AUC (2026-07-10)
 # =============================================================================
-# ROOT CAUSE (from 260710-siblings_lopo_reproducible.R): the 0.79/0.815/0.827 wobble is
-# NOT the classifier (over 300 cv.glmnet seeds with a FIXED feature set the pooled AUC is
-# constant, sd=0) and NOT any model difference (260703 == script 04 baseline on every
-# setting). It is DRIMSeq's dmPrecision estimating the common precision from a RANDOM 10%
+# Root cause (from 10-260710-siblings_lopo_reproducible.R): the 0.79/0.815/0.827 wobble is
+# not the classifier (over 300 cv.glmnet seeds with a fixed feature set the pooled AUC is
+# constant, sd=0) and not any model difference (260703 == script 04 baseline on every
+# setting). It is DRIMSeq's dmPrecision estimating the common precision from a random 10%
 # subset of genes; that subset was drawn from an uncontrolled RNG stream, so the per-fold
 # top-50 feature ranking differed run-to-run, and with n=18 held-out samples one reordered
 # case/control pair moves the pooled AUC by ~1/81 ~ 0.012.
 #
-# MINIMAL REPRODUCIBILITY FIX (model logic UNCHANGED; NO leakage change):
-#   - set.seed(SEED) as the FIRST line inside the DRIMSeq call -> fixes WHICH 10% gene
+# Minimal reproducibility fix (model logic unchanged; no leakage change):
+#   - set.seed(SEED) as the first line inside the DRIMSeq call -> fixes which 10% gene
 #     subset is drawn. Per-call seeding makes feature selection depend only on
-#     (SEED, fold training data), so EVERY script that selects features for a fold gets
+#     (SEED, fold training data), so every script that selects features for a fold gets
 #     the identical set, independent of any other RNG the script uses.
 #   - set.seed(SEED) immediately before cv.glmnet -> fixes the internal-CV fold assignment.
 #     (Default nfolds kept; ridge/alpha/lambda.min unchanged. AUC is invariant to this seed
 #      anyway; we seed it only for bit-for-bit reproducibility.)
-# Verified: with per-call seeding, MulticoreParam is reproducible AND identical to
-# SerialParam (50/50 features) -> we keep MulticoreParam, so there is NO speed penalty.
+# Verified: with per-call seeding, MulticoreParam is reproducible and identical to
+# SerialParam (50/50 features) -> we keep MulticoreParam, so there is no speed penalty.
 # Everything else (DRIMSeq design/filter/prec settings, TOPK=50, leave-one-pair-out split,
-# train-only feature selection) is byte-identical to 260703.
+# train-only feature selection) is byte-identical to 09-260703.
 #
-# ANTI-CHERRY-PICK: SEED is the project-standard 123 (not searched). We also map the AUC
-# over N independent stochastic DRIMSeq realisations (random subset) to SHOW the fixed-seed
+# Seed choice: SEED is the project-standard 123 (not searched). We also map the AUC
+# over N independent stochastic DRIMSeq realisations (random subset) to check that the fixed-seed
 # value sits inside the natural spread; the spread is written out for a QC notebook.
-# Env: conda R_downstream.
+# Env: conda apa-r.
 # =============================================================================
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
@@ -62,7 +62,7 @@ meta_all <- data.frame(sample_id = sheet$sample_id, Diagnosis = factor(sheet$Dia
                        family = factor(sheet$family), stringsAsFactors = FALSE)
 rownames(meta_all) <- meta_all$sample_id; families <- levels(meta_all$family); y_all <- meta_all$Diagnosis
 
-# ---- feature selection (identical to 260703) with per-call set.seed(seed) as ONLY change ----
+# ---- feature selection (identical to 260703) with per-call set.seed(seed) as only change ----
 run_drimseq_paired <- function(cmat, meta, seed = SEED) {
   set.seed(seed)                                # <-- the reproducibility fix (fixes the 10% subset)
   meta <- droplevels(meta); df <- data.frame(gene_id = gene_id, feature_id = feature_id, cmat, check.names = FALSE)
@@ -76,7 +76,7 @@ run_drimseq_paired <- function(cmat, meta, seed = SEED) {
   res <- results(d, level = "feature"); res <- res[!is.na(res$pvalue), ]; head(res[order(res$pvalue), ]$feature_id, TOPK)
 }
 auc1 <- function(y, s) as.numeric(pROC::auc(pROC::roc(y, s, levels = c("CTRL","ASD"), direction = "<", quiet = TRUE)))
-lopo_from_feats <- function(feat_by_fam) {              # classifier UNCHANGED (ridge, default nfolds), just seeded
+lopo_from_feats <- function(feat_by_fam) {              # classifier unchanged (ridge, default nfolds), just seeded
   probs <- setNames(rep(NA_real_, nrow(meta_all)), meta_all$sample_id)
   for (fam in families) {
     feats <- feat_by_fam[[fam]]
@@ -104,7 +104,7 @@ f1b <- run_drimseq_paired(counts_mat[, meta_all$sample_id[meta_all$family != fam
                           meta_all[meta_all$sample_id[meta_all$family != families[1]], , drop=FALSE], SEED)
 cat(sprintf("determinism (per-call set.seed(%d), Multicore, fold 1 identical on repeat): %s\n", SEED, identical(f1a, f1b)))
 
-## ---- DETERMINISTIC pipeline (seed = SEED everywhere) ----
+## ---- Deterministic pipeline (seed = SEED everywhere) ----
 det_feats <- select_all(SEED)
 prob_det <- lopo_from_feats(det_feats)
 a_det <- auc1(y_all, prob_det); ci_det <- boot_ci(y_all, prob_det)
@@ -114,14 +114,14 @@ wp_det <- sum(sapply(families, function(f){ p <- prob_det[meta_all$sample_id[met
 cat(sprintf("\n== DETERMINISTIC LOPO (set.seed(%d), model unchanged) ==\n", SEED))
 cat(sprintf("pooled AUC = %.3f | boot95 = [%.3f, %.3f] | DeLong95 = [%.3f, %.3f] | within-pair = %d/9\n",
             a_det, ci_det[1], ci_det[2], del_det[1], del_det[3], wp_det))
-# save deterministic outputs FIRST (so a stochastic-realisation failure cannot lose them)
+# save deterministic outputs first (so a stochastic-realisation failure cannot lose them)
 write.csv(data.frame(auc_deterministic = a_det, boot_lo = ci_det[1], boot_hi = ci_det[2],
                      delong_lo = del_det[1], delong_hi = del_det[3], within_pair = wp_det, seed = SEED),
           file.path(OUT, "deterministic_auc_summary.csv"), row.names = FALSE)
 write.csv(data.frame(sample_id = meta_all$sample_id, truth = as.character(y_all), prob = prob_det),
           file.path(OUT, "deterministic_lopo_preds.csv"), row.names = FALSE)
 
-## ---- honesty: AUC over N stochastic DRIMSeq realisations (random subset) ----
+## ---- spread: AUC over N stochastic DRIMSeq realisations (random subset) ----
 # tryCatch per realisation: some random 10% subsets make DRIMSeq's optim diverge; skip those.
 cat(sprintf("\nmapping AUC over %d stochastic DRIMSeq realisations...\n", N_STOCH))
 stoch_auc <- rep(NA_real_, N_STOCH)

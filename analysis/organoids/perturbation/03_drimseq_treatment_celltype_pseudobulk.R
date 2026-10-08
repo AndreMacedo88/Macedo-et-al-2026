@@ -1,24 +1,24 @@
 #!/usr/bin/env Rscript
 
 # =============================================================================
-# Celltype-CONTROLLED treatment-effect DRIMSeq LRT.
+# Celltype-controlled treatment-effect DRIMSeq LRT.
 #
-# Follow-up to drimseq_treatment_main_pseudobulk.R. Instead of adjusting for the
+# Follow-up to 02_drimseq_treatment_main_pseudobulk.R. Instead of adjusting for the
 # developmental axis with a pseudotime spline, we pseudobulk by (sample x celltype)
 # and put `celltype` directly in the design, so the `induced` contrast is estimated
-# WITHIN cell type -> it removes the cell-type COMPOSITION confound (induced organoids
-# are progenitor-enriched, Li et al.). This is the pooled-screen analogue of the
-# cell-type-controlled sensitivity used for the focused KMT2C layer (Section 3.4).
+# within cell type, which removes the cell-type composition confound (induced organoids
+# are progenitor-enriched, Li et al.). This is the cell-type-controlled sensitivity
+# analysis of the pooled screen.
 #
 #   full  ~ celltype + super_batch + induced
 #   null  ~ celltype + super_batch
 #
 # super_batch is retained as the confound-breaker (super_batch 137 is 100% induced,
 # so the induced effect is estimated from the induced cells present in batches 206/213
-# within each cell type). A raw AND a celltype-stratified delta_psi are both written.
+# within each cell type). A raw and a celltype-stratified delta_psi are both written.
 #
 # Usage:
-#   Rscript drimseq_treatment_celltype_pseudobulk.R \
+#   Rscript 03_drimseq_treatment_celltype_pseudobulk.R \
 #       --input /path/merged_*.h5ad --lineage inhibitory \
 #       --output_dir /path/results/inhibitory/celltype_controlled \
 #       --require_targeting_guide TRUE --min_cells_per_unit 10 --ncores 16
@@ -30,7 +30,7 @@ if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
 suppressPackageStartupMessages({
     library(Matrix)
 })
-reticulate::use_condaenv("R_downstream", required = TRUE)
+reticulate::use_condaenv("apa-r", required = TRUE)
 box::use(
     DRIMSeq[
         dmDSdata,
@@ -90,7 +90,7 @@ dir.create(opts$output_dir, recursive = TRUE, showWarnings = FALSE)
 bpp <- BiocParallel::MulticoreParam(workers = opts$ncores)
 slug <- gsub("[^A-Za-z0-9]+", "_", tolower(opts$lineage))
 
-# ---- helpers (verbatim from main script) ----
+# ---- helpers (as in 02_drimseq_treatment_main_pseudobulk.R) ----
 pseudobulk_by_group <- function(X, groups) {
     gf <- droplevels(as.factor(groups))
     G <- Matrix::fac2sparse(gf)

@@ -27,7 +27,7 @@ rule prepare_inputs:
         bam_list=f"{config['process_dir']}/bam_paths.txt",
         anno_file=f"{config['process_dir']}/annotations.csv",
     conda:
-        "downstr"
+        "apa-python"
     script:
         "02-prepare_inputs.py"
 
@@ -42,7 +42,7 @@ rule utr_mapping_raw:
         gtf=config["human_gtf"],
     threads: 26
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         bams=$(cat {input.bam_list} | tr '\n' ' ')
@@ -58,7 +58,7 @@ rule call_peaks:
     params:
         out=f"{config['results_dir']}{config['results_base_name']}",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling call-peaks-different-bandwidths {input} {params.out} -b 12
@@ -71,7 +71,7 @@ rule trim_peaks:
     output:
         f"{config['results_dir']}{config['results_base_name']}_bw12_above10cts.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling remove-peaks-below-threshold {input} {output} -t 0.05 -m 10
@@ -84,7 +84,7 @@ rule remove_non_apa_utrs:
     output:
         f"{config['results_dir']}{config['results_base_name']}_bw12_above10cts_apa.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling select-alternative-transcription-events {input} {output}
@@ -97,7 +97,7 @@ rule rename_peaks_to_gene_name:
     output:
         f"{config['results_dir']}{config['results_base_name']}_bw12_above10cts_apa_named.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling generate-names {input} {output} -u utr_name -g gene_name
@@ -109,7 +109,7 @@ rule counts_to_percentages:
     output:
         f"{config['results_dir']}{config['results_base_name']}_bw12_above10cts_apa_named_percentages.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling counts-to-percentages {input} {output} -u utr_name

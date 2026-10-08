@@ -1,4 +1,4 @@
-name: downstr
+name: apa-python
 channels:
   - conda-forge
   - bioconda

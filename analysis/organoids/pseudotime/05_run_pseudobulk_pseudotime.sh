@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Driver for 260526-drimseq_pseudotime_pseudobulk.R.
+# Driver for 06_260526-drimseq_pseudotime_pseudobulk.R.
 #
 # Pseudobulk DRIMSeq pseudotime LRT (controls-only) per lineage. Three
-# quantile-bins of pseudotime as a factor; ~ super_batch + factor(pt_bin)
-# vs ~ super_batch. Knoblich organoids.
+# quantile-bins of pseudotime as a factor; ~ batch_number + factor(pt_bin)
+# vs ~ batch_number (COVARIATE_COL below). Knoblich organoids.
 #
 # Outputs (per lineage):
 #   $OUTBASE/<lineage>/pseudobulk_pseudotime/
@@ -18,9 +18,9 @@
 #     run.log
 #
 # Usage:
-#   bash run_pseudobulk_pseudotime.sh
+#   bash 05_run_pseudobulk_pseudotime.sh
 # or with overrides:
-#   N_BINS=4 NCORES=8 bash run_pseudobulk_pseudotime.sh
+#   N_BINS=4 NCORES=8 bash 05_run_pseudobulk_pseudotime.sh
 # =============================================================================
 
 set -euo pipefail
@@ -39,11 +39,11 @@ MIN_FEATURE_EXPR=${MIN_FEATURE_EXPR:-20}
 SEED=${SEED:-42}
 LINEAGES=${LINEAGES:-"inhibitory excitatory"}
 # Batch covariate. Default: batch_number (= sample_id = "library" in Li et al.
-# 2023; matches the cell-level LRT and permutation conventions). DO NOT change
-# to super_batch unless you also re-read 260526-pseudobulk_pseudotime_methods.md
-# Section 6 -- super_batch in controls-only has only 2 levels and one of them
-# (213) contains a single sample, so it fails to control for between-sample
-# variation among the other 7 controls samples.
+# 2023; as in the cell-level LRT and permutation test).
+# super_batch is not used: in the controls-only data it has only
+# 2 levels, and one of them (213) contains a single sample, so
+# super_batch would not control for between-sample variation among
+# the other 7 control samples.
 COVARIATE_COL=${COVARIATE_COL:-batch_number}
 
 # Inputs / outputs

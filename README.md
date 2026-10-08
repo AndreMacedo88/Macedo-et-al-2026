@@ -32,18 +32,18 @@ Files are numbered in the order in which they run within each folder. Several no
 
 ## Software
 
-Three conda environments are used:
+The analyses were run in three conda environments. We suggest recreating them from the files below, which list the package versions used for the paper; other installations of the same packages should work as well.
 
 | Environment | File | Used for |
 |---|---|---|
-| `downstr` | `environment/downstr.yml` | Python notebooks and scripts (Python 3.14, scanpy, anndata, harmonypy, scikit-learn) |
-| `R_downstream` | `environment/R_downstream.yml` | R scripts and R notebooks (R 4.4.3, DRIMSeq, clusterProfiler, ReactomePA, glmnet, pROC; IRkernel) |
-| `utrcalling` | `environment/utrcalling.yml` | 3'-end workflows (install `utrcalling` from [[GitHub URL of the tool]] into this environment; the paper used version 2.5.3 for the mouse data and 3.1.10 for the organoid and blood data) |
+| `apa-python` | `environment/apa-python.yml` | Python notebooks and scripts (Python 3.14, scanpy, anndata, harmonypy, scikit-learn) |
+| `apa-r` | `environment/apa-r.yml` | R scripts and R notebooks (R 4.4.3, DRIMSeq, clusterProfiler, ReactomePA, glmnet, pROC; IRkernel) |
+| `apa-utrcalling` | `environment/apa-utrcalling.yml` | 3'-end workflows (install the `utrcalling` package from [[GitHub URL of the tool]] into this environment; the paper used version 2.5.3 for the mouse data and 3.1.10 for the organoid and blood data) |
 
 ```bash
-conda env create -f environment/downstr.yml
-conda env create -f environment/R_downstream.yml
-conda env create -f environment/utrcalling.yml
+conda env create -f environment/apa-python.yml
+conda env create -f environment/apa-r.yml
+conda env create -f environment/apa-utrcalling.yml
 ```
 
 The preprocessing workflows also need Snakemake [[version]], STAR 2.7.9a and samtools 1.11 (created by Snakemake from the `envs/` files with `--use-conda`), and Cell Ranger 6.1.1 (mouse) and 8.0.1 (organoids), which are distributed by 10x Genomics.
@@ -77,12 +77,12 @@ Activate the environment named in each step. Shell runners take their settings f
 ### Mouse (Fig. 1, fig. S1)
 
 1. `preprocessing/mouse_svz/01_wildtype_mice` (Snakemake; STAR alignment and Cell Ranger), then `02_AggWildtypes` (`cellranger aggr`, command in `_cmdline`).
-2. Notebooks `03` to `05` (`downstr`): quality control, integration, pseudotime and cell states.
-3. `06_snakemake_pipeline` (Snakemake, `utrcalling`): site calling on the gene-level 3'UTR axis, which gives the site count matrix used everywhere else.
-4. Notebooks `07` to `10` (`downstr`): lineage subset, integration on site counts and proportions, graph smoothing.
+2. Notebooks `03` to `05` (`apa-python`): quality control, integration, pseudotime and cell states.
+3. `06_snakemake_pipeline` (Snakemake, `apa-utrcalling`): site calling on the gene-level 3'UTR axis, which gives the site count matrix used everywhere else.
+4. Notebooks `07` to `10` (`apa-python`): lineage subset, integration on site counts and proportions, graph smoothing.
 5. `analysis/mouse_svz/` in numbered order:
-   - `01` (`downstr`): effect sizes.
-   - `02` (`R_downstream`): Dirichlet-multinomial test. Run `Rscript 02_260401-dirichlet_multinomial_analysis_optimized_2.R <lineage h5ad> --method joint --spline_df 5 --bootstrap 199 --bootstrap_pval 0.1`.
+   - `01` (`apa-python`): effect sizes.
+   - `02` (`apa-r`): Dirichlet-multinomial test. Run `Rscript 02_260401-dirichlet_multinomial_analysis_optimized_2.R <lineage h5ad> --method joint --spline_df 5 --bootstrap 199 --bootstrap_pval 0.1`.
    - `03` and `04` via their runners: permutation test and pseudobulk test.
    - `05` to `08`: smoothed W, composite ranking, comparison of the three tests, enrichment.
    - `09` and `10` (R): enrichment on the conservative gene set, curated gene sets.
@@ -94,7 +94,7 @@ Activate the environment named in each step. Shell runners take their settings f
 ### Organoids (Fig. 2, figs. S2 and S3)
 
 1. `preprocessing/organoids/01_snakemake_workflow` (Snakemake): download, Cell Ranger, site calling (`utrcalling`, standard 3' chemistry).
-2. Notebooks `02` to `08` (`downstr`): metadata, lineages, pseudotime, embeddings, transfer of pseudotime to the site matrix.
+2. Notebooks `02` to `08` (`apa-python`): metadata, lineages, pseudotime, embeddings, transfer of pseudotime to the site matrix.
 3. Developmental contrast, `analysis/organoids/pseudotime/` in numbered order:
    - Runners `01`, `03` and `05`: Dirichlet-multinomial, permutation and pseudobulk tests.
    - `07` to `13`: comparison of tests, effect sizes, ranking, metrics, orthologues, ASD-risk genes.
@@ -108,12 +108,12 @@ Activate the environment named in each step. Shell runners take their settings f
 
 ### Distance of poly(A) sites to the polyadenylation signal (Fig. 1B)
 
-`analysis/pas_distance/261007-pas_hexamer_distance_organoid_vs_mouse.ipynb` (`downstr`; it also calls the `utrcalling` environment) uses the final mouse and organoid site matrices and the GRCm38 and GRCh38 genome sequences. It writes the per-site distances that `figures/fig1/fig1b_pas_distance` plots and the organoid-mouse comparison given in the Methods.
+`analysis/pas_distance/261007-pas_hexamer_distance_organoid_vs_mouse.ipynb` (`apa-python`; it also calls the `apa-utrcalling` environment) uses the final mouse and organoid site matrices and the GRCm38 and GRCh38 genome sequences. It writes the per-site distances that `figures/fig1/fig1b_pas_distance` plots and the organoid-mouse comparison given in the Methods.
 
 ### Blood (Fig. 4, fig. S4)
 
-1. `preprocessing/blood/01-remapping.smk` (STAR), `02-utrmapping_genelevel.smk` (`utrcalling`, gene level), notebook `03` (gene-level count table for quality control).
-2. `analysis/blood/` in numbered order (R scripts in `R_downstream`, Python in `downstr`):
+1. `preprocessing/blood/01-remapping.smk` (STAR), `02-utrmapping_genelevel.smk` (`apa-utrcalling`, gene level), notebook `03` (gene-level count table for quality control).
+2. `analysis/blood/` in numbered order (R scripts in `apa-r`, Python in `apa-python`):
    - `04` runs through `04-run_repeated_cv.sh`.
    - `10` and `11` are the seed and initialisation checks of the within-family classifier.
 3. Figure notebooks in `figures/fig4/`.

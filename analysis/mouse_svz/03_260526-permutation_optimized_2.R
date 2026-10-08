@@ -2,15 +2,15 @@
 
 # ============================================================================
 # Within-Sample Permutation LRT for 3'UTR Usage Along Pseudotime
-# (Mouse SVZ; companion to 260401-...optimized_2.R)
+# (Mouse SVZ; permutation counterpart of 02_260401-...optimized_2.R)
 #
-# Bit-identical to organoids_knoblich/UTR/260526-permutation_optimized_2.R
-# (the canonical source). Kept as a separate copy in the mouse tree so that
-# (i) `bash run_permutation_all.sh` runs locally without cross-tree paths,
+# Same method as analysis/organoids/pseudotime/04_260526-permutation_optimized_2.R
+# (the organoid version). Kept as a separate copy for mouse so that
+# (i) `bash 03_run_permutation_all.sh` runs without cross-directory paths,
 # and (ii) mouse-specific knobs can diverge from the Knoblich version in
 # future without touching the organoid script.
 #
-# Forked from `260401-dirichlet_multinomial_analysis_optimized_2.R`. Sections
+# Forked from `02_260401-dirichlet_multinomial_analysis_optimized_2.R`. Sections
 # 0-4 are bit-identical to the source: DM math, optim, gene-fitting cascade,
 # loess s-trend, test suite (extended with permutation tests). The fork is
 # localised to:
@@ -21,16 +21,16 @@
 #   - Section 6     (output)               + p_value_perm, n_permutations cols
 #   - run_metadata.json sidecar written next to the CSV
 #
-# Why this script exists:
-#   Mouse chi-sq is already well-calibrated (260407-...QC.ipynb Section 4
-#   reports 91.6% concordance with the parametric bootstrap), so the
-#   permutation analysis is a parity exercise for the paper's defensibility
-#   table -- the same defensibility statement appears in Figure 1 (mouse)
-#   and Figure 2 (Knoblich). The Knoblich script header explains the load-
-#   bearing scientific motivation; for mouse this is "for completeness and
-#   to appease reviewers" (260522-bootstrap_concordance.ipynb Section 14).
+# Purpose:
+#   The mouse chi-sq LRT is already well calibrated (91.6% concordance with
+#   the parametric bootstrap in an earlier QC notebook), so for mouse the
+#   permutation analysis is run for parity with the organoid analysis: the
+#   comparison of tests is shown for both datasets (fig. S1B, S1C for mouse;
+#   fig. S2B, S2C for the organoids). The organoid script header explains
+#   the motivation (cell-level pseudoreplication); for mouse the test is run
+#   for completeness.
 #
-#   A WITHIN-SAMPLE permutation null fixes this: shuffle pseudotime values
+#   A within-sample permutation null addresses this: shuffle pseudotime values
 #   only within each sample, preserving per-sample marginals + between-sample
 #   batch effects, but breaking within-sample cell-pseudotime association.
 #   The resulting null distribution of the LRT statistic is automatically
@@ -40,7 +40,7 @@
 # Permutation strategy options (--permutation_strategy):
 #   within_sample (default)  pseudotime shuffled within each --permutation_block_col
 #   global                   pseudotime shuffled across all cells in the lineage
-#                            (less defensible when samples are imbalanced)
+#                            (less appropriate when samples are imbalanced)
 #
 # Adaptive B with early stopping:
 #   --n_perm_init   (default 49)   initial number of permutations per gene
@@ -63,13 +63,13 @@
 #   - run_metadata.json sidecar records master_seed, R_version, package_versions,
 #     command line, start_time, end_time, host.
 #
-# Usage (mouse SVZ has one lineage; the driver run_permutation_all.sh is
+# Usage (mouse SVZ has one lineage; the driver 03_run_permutation_all.sh is
 # invoked once with no lineage loop):
 #
 #   IN=$M26_DATA_ROOT/3utr/wildtypes_analysis/2026_analyses/utrcalling/\
 # UTR_count_table_genelevel_bw12_above10cts_apa_named.h5ad
 #
-#   ./260526-permutation_optimized_2.R $IN \
+#   ./03_260526-permutation_optimized_2.R $IN \
 #       --pseudotime_col dpt_pseudotime \
 #       --covariate_cols batch_number \
 #       --permutation_block_col sample_id \
@@ -80,9 +80,9 @@
 # SUBSAMPLE_N=0 means no subsampling -- mouse has ~14k lineage cells, which
 # is tractable at full size on 26 cores.)
 #
-# Companion methods document: 260526-permutation_methods.md (Knoblich tree)
-# Companion driver shell:     run_permutation_all.sh
-# Companion QC notebook:      260526-permutation_concordance.ipynb
+# Driver:                     03_run_permutation_all.sh
+# Comparison with the chi-sq LRT and the pseudobulk test:
+#                             07_260526-three_way_defensibility.ipynb
 # ============================================================================
 
 # ===== Section 0: Libraries and Argument Parsing =============================
@@ -96,7 +96,7 @@ library(numDeriv)
 library(digest)    # xxhash32 for per-gene seed derivation (permutation only)
 library(jsonlite)  # run_metadata.json sidecar (permutation only)
 
-# NOTE on RNG kind:
+# Note on RNG kind:
 #   RNGkind() is left at the R default (Mersenne-Twister) for compatibility
 #   with the inherited test suite (Tests 1-14 calibrate against MT). The
 #   switch to L'Ecuyer-CMRG (parallel-safe substreams) is performed locally
@@ -569,15 +569,15 @@ optimize_beta_fixed_s <- function(Y, mm, K, beta_init, s, max_iter) {
 
 #' Fit full and null DirMult models for one gene, compute LRT
 #'
-#' optimized_2 (publication-rigor revision): Shared-s pipeline with conditional
-#' MLE refits in *both* the full and null beta subspaces.
+#' optimized_2: shared-s pipeline with conditional
+#' MLE refits in both the full and null beta subspaces.
 #'
 #' Pipeline:
 #'   1. Fit full model jointly (or profile/fixed-s); on failure, fall back to
 #'      fixed-s on the full design at s_trend.
 #'   2. Extract s_shared = fit_full$s.
 #'   3. Refit the full model beta at fixed s_shared (Stage 1). The joint optimum
-#'      beta is NOT in general the conditional MLE at s_shared because L(beta, s)
+#'      beta is not in general the conditional MLE at s_shared because L(beta, s)
 #'      is not concave in beta under DirMult + softmax. The refit produces an
 #'      actual conditional MLE on the full beta subspace, mirroring how the null
 #'      is fit.
@@ -589,7 +589,7 @@ optimize_beta_fixed_s <- function(Y, mm, K, beta_init, s, max_iter) {
 #'      verified by re-evaluating the LL on the padded beta and falling through
 #'      to Stage 3 if the column-prefix property has been broken (e.g. by QR
 #'      pivoting on rank-deficient designs).
-#'   6. If ll_full < ll_null even after Stage 2 (vanishingly rare), set
+#'   6. If ll_full < ll_null even after Stage 2 (rare), set
 #'      lrt_status = "optimization_failed" and return NA for deviance and
 #'      p_value (Stage 3). These genes are excluded from BH adjustment in the
 #'      output assembly rather than reported with deviance = 0, p = 1.
@@ -747,7 +747,7 @@ fit_dirmult_gene <- function(Y, mm_full, mm_null, K, method, s_trend,
     # --- Step 4: LRT (both likelihoods at s_shared) ---
     # Stage 3: if ll_full is still below ll_null, the LRT cannot be constructed
     # correctly. Return NA with status "optimization_failed" so the gene is
-    # honestly excluded from BH adjustment rather than reported as p = 1.
+    # excluded from BH adjustment rather than reported as p = 1.
     lrt_status <- "ok"
     if (fit_full$ll < fit_null$ll - 1e-10) {
         lrt_status <- "optimization_failed"
@@ -819,7 +819,7 @@ permute_pseudotime <- function(pt, blocks, strategy = "within_sample") {
 #' Within-sample permutation p-value for the conditional LRT statistic
 #'
 #' Generates B permuted-pseudotime replicates by shuffling the cell-level
-#' pseudotime vector WITHIN sample blocks (preserves per-sample marginal +
+#' pseudotime vector within sample blocks (preserves per-sample marginal +
 #' between-sample batch differences in UTR usage; breaks within-sample cell-
 #' pseudotime association). Refits beta_full at fixed s_shared on each
 #' replicate's permuted design matrix; ll_null is invariant to the
@@ -827,7 +827,7 @@ permute_pseudotime <- function(pt, blocks, strategy = "within_sample") {
 #'
 #' Why valid: under the null hypothesis "UTR usage is independent of
 #' pseudotime within sample", the permuted-pseudotime data is exchangeable
-#' with the observed data. The permutation null does NOT assume per-cell
+#' with the observed data. The permutation null does not assume per-cell
 #' exchangeability, nor Wilks regularity, nor DirMult model correctness on
 #' the marginal distribution -- it only assumes that the joint distribution
 #' of (Y, sample, batch) is preserved up to the within-sample pseudotime
@@ -846,13 +846,13 @@ permute_pseudotime <- function(pt, blocks, strategy = "within_sample") {
 #' dispatch order. set.seed(gene_seed) is called once at function entry.
 #'
 #' Efficiency techniques:
-#'   - s_shared FIXED (re-using the unpermuted MLE estimate).
-#'   - ll_null computed ONCE before the loop (null model has no pt term).
+#'   - s_shared fixed (re-using the unpermuted MLE estimate).
+#'   - ll_null computed once before the loop (null model has no pt term).
 #'   - beta_null and the null design matrix are also invariant.
 #'   - The spline basis is recomputed on permuted pt each iteration (knots
 #'     are invariant to the permutation because the marginal of pt is preserved
 #'     exactly, but the per-cell basis values change).
-#'   - Stage 2/3 safety nets are SKIPPED inside the permutation loop. If
+#'   - Stage 2/3 safety nets are skipped inside the permutation loop. If
 #'     ll_full_perm < ll_null after the fixed-s refit, set D_b = 0. The
 #'     Stage 2 padded-null refit doubles per-permutation cost and is unnecessary
 #'     for permutation: the bias from skipping it is monotone (always pulls
@@ -899,7 +899,7 @@ permute_dirmult_lrt <- function(Y_obs, mm_null, covariate_mm, K,
 
     # Pre-check rank once on the reference (unpermuted) full design. Under
     # within-sample permutation the marginal of pt is preserved, so the spline
-    # basis rank is invariant across all permuted designs — no per-permutation
+    # basis rank is invariant across all permuted designs - no per-permutation
     # QR needed when the reference is full rank.
     spline_ref <- tryCatch(bs(pt_keep, df = spline_df), error = function(e) NULL)
     ref_full_rank <- !is.null(spline_ref) &&
@@ -1427,7 +1427,7 @@ if (opts$test) {
     # Verifies the padded-null safety net works when invoked: build a synthetic
     # gene, manually run the Stage 1 refit, then artificially zero out the full-
     # model beta (the worst possible warm start) and call optimize_beta_fixed_s
-    # twice — once from the bad init, once from the padded null — and assert
+    # twice - once from the bad init, once from the padded null - and assert
     # that the second always reaches at least the null LL.
     cat("Test 13: Stage 2 padded-null fallback... ")
     set.seed(13L)
@@ -1491,7 +1491,7 @@ if (opts$test) {
         all_pass <- FALSE
     }
 
-    # Test 15: (deleted in 260526 fork -- tested bootstrap_dirmult_lrt which
+    # Test 15: (removed in this version; it tested bootstrap_dirmult_lrt, which
     # has been replaced by permute_dirmult_lrt; see Test 19-21 below for the
     # permutation analogues of "uniformity / signal recovery / reproducibility".)
 
@@ -1503,7 +1503,7 @@ if (opts$test) {
     #       pass individually after FWER correction.
     #   (b) Fisher combined test across all 27 cells: X^2 = -2 * sum(log(p_cell))
     #       ~ chi^2(54) under global H0. Requires X^2 p-value > 0.01 globally.
-    # Both must pass. This is strictly more rigorous than the naive "all 27
+    # Both must pass. This replaces the plain "all 27
     # cells pass at 1%" check (which has ~24% FWER under H0 by Sidak, causing
     # spurious failures). Uses n=150 per cell for better KS resolution and to
     # reduce the chance of ties from near-p=1 clustering in the extreme regime.
@@ -1643,8 +1643,8 @@ if (opts$test) {
         lambda = 0.1, max_iter = 300, compute_se = FALSE
     )
     # Use cov_mm = intercept-only (first column of mm_full). For the
-    # permutation we just need ANY pt vector of length N that the inner
-    # bs(pt_perm, df) call can consume; the pt vector used to BUILD mm_full
+    # permutation we just need any pt vector of length N that the inner
+    # bs(pt_perm, df) call can consume; the pt vector used to build mm_full
     # inside generate_test_data is not exposed by that helper, so we supply
     # a fresh canonical pt here. The permutation test is API/sanity only.
     pt_t19 <- seq(0, 1, length.out = 300L)
@@ -1668,9 +1668,9 @@ if (opts$test) {
     # For a truly null gene the chi-sq deviance lands in the bulk of the
     # permutation distribution; we expect n_hits to hit the early-stop
     # threshold (5) within the first few dozen permutations. Accept the
-    # test as PASSED if (i) p_perm is a valid probability and (ii) the
+    # test as passed if (i) p_perm is a valid probability and (ii) the
     # adaptive stopping triggered (status == "early_stop_high_p" with
-    # n_perm < 49) OR ran the full n_perm_init without early stopping.
+    # n_perm < 49) or ran the full n_perm_init without early stopping.
     valid_p <- !is.na(perm_res19$p_perm) &&
         perm_res19$p_perm >= 0 && perm_res19$p_perm <= 1
     valid_status <- perm_res19$permutation_status %in%
@@ -1844,7 +1844,7 @@ data <- read_h5ad(opts$data_path)
 n_total <- nrow(data$obs)
 cat("Loaded:", n_total, "cells x", ncol(data$X), "features\n")
 
-# Pull what we need from the AnnData; KEEP X SPARSE for now. Filtering and
+# Pull what we need from the AnnData; keep X sparse for now. Filtering and
 # subsampling happen on the sparse matrix to avoid the 33 GiB peak from
 # densifying the full data set.
 all_cells <- rownames(data$obs)
@@ -1878,7 +1878,7 @@ induced_chr <- if ("induced" %in% colnames(data$obs)) {
     rep(NA_character_, n_total)
 }
 
-# NEW (260526): permutation block column. Each cell's permutation block
+# New (260526): permutation block column. Each cell's permutation block
 # defines the unit within which pseudotime labels are shuffled under
 # --permutation_strategy=within_sample. For Knoblich this is sample_id;
 # for mouse it is batch.
@@ -1891,7 +1891,7 @@ if (!opts$permutation_block_col %in% colnames(data$obs)) {
 }
 permutation_block_all <- as.character(data$obs[[opts$permutation_block_col]])
 
-# ----- Cell-level filters (BEFORE dense conversion) ------------------------
+# ----- Cell-level filters (before dense conversion) ------------------------
 
 # 1. Drop cells with NA in the requested pseudotime column. When a
 #    lineage-specific column is passed, this also restricts to that lineage.
@@ -1933,7 +1933,7 @@ covariate_df <- covariate_df[mask, , drop = FALSE]
 pseudotime <- pseudotime[mask]
 all_cells <- all_cells[mask]
 induced_chr_kept <- induced_chr[mask]
-permutation_block <- permutation_block_all[mask]  # NEW (260526)
+permutation_block <- permutation_block_all[mask]  # New (260526)
 
 # Free the full AnnData object before densifying
 rm(data, induced_chr, permutation_block_all)
@@ -2076,7 +2076,7 @@ empty_gene_result <- function(utr, n_cells_keep, K_obs, method) {
         max_var_ratio = NA_real_, min_var_ratio = NA_real_,
         beta_full = NULL, beta_null = NULL, mm_full = NULL, mm_null = NULL,
         Y = NULL, n_counts = NULL,
-        # NEW (260526): per-gene pt and block subsets, used by permute_dirmult_lrt
+        # New (260526): per-gene pt and block subsets, used by permute_dirmult_lrt
         pt_keep = NULL, block_keep = NULL, covariate_mm = NULL
     )
 }
@@ -2111,7 +2111,7 @@ fit_one_utr <- function(utr, lambda_val, lambda_method = NULL) {
             )
             r$Y <- Y_sel
             r$n_counts <- rowSums(Y_sel)
-            # NEW (260526): per-gene pt and block subsets, used by permute_dirmult_lrt
+            # New (260526): per-gene pt and block subsets, used by permute_dirmult_lrt
             r$pt_keep <- pseudotime[keep]
             r$block_keep <- permutation_block[keep]
             r$covariate_mm <- cov_mm
@@ -2129,26 +2129,26 @@ fit_one_utr <- function(utr, lambda_val, lambda_method = NULL) {
 }
 
 # --- Dynamic load-balanced dispatch helper -------------------------------
-# Replaces pblapply(cl=cluster) which uses STATIC chunked scheduling
+# Replaces pblapply(cl=cluster) which uses static chunked scheduling
 # (parLapply: contiguous blocks of ~N/ncores genes per worker, with a sync
 # barrier every progress-bar chunk). Static chunking leaves cores idle while
-# a few stragglers finish -- catastrophic for the permutation phase where
-# per-gene cost varies ~20x (B=49 early-stop vs B=999 escalation) AND for the
+# a few stragglers finish, which is costly for the permutation phase where
+# per-gene cost varies ~20x (B=49 early-stop vs B=999 escalation) and for the
 # fit phase where high-K / high-cell genes are much slower than average. When
 # slow genes are adjacent in the gene list (high-K genes cluster), static
 # scheduling can run 7x slower than ideal (benchmarked 2026-05-27).
 #
-# parLapplyLB(chunk.size=1) dispatches ONE gene at a time to whichever worker
+# parLapplyLB(chunk.size=1) dispatches one gene at a time to whichever worker
 # is free, eliminating the straggler problem (benchmarked ~1.05x ideal even
-# with maximally-clustered slow genes). We split into `n_progress` ROUND-ROBIN
+# with maximally-clustered slow genes). We split into `n_progress` round-robin
 # batches purely to print progress; round-robin assignment guarantees slow
 # genes spread across batches so each batch stays balanced (a contiguous split
 # would re-cluster them and reintroduce barriers).
 #
-# CORRECTNESS: results are invariant to scheduling because every gene reseeds
+# Correctness: results are invariant to scheduling because every gene reseeds
 # its own RNG via set.seed(gene_seed_from(master_seed, utr_name)) at task
 # entry (Phase C / D) or consumes no RNG at all (Phase B). Verified
-# bit-identical between static vs dynamic AND between 26-core vs 4-core runs.
+# bit-identical between static vs dynamic and between 26-core vs 4-core runs.
 dispatch_lb <- function(cl, idx, FUN, n_progress = 20L, label = "") {
     n <- length(idx)
     if (n == 0L) return(list())
@@ -2193,7 +2193,7 @@ stopCluster(cl)
 # Index results by utr_name for fast lookup in Phases C/D
 names(results_list) <- vapply(results_list, `[[`, character(1), "utr_name")
 
-# --- Phase C: Within-sample permutation on ALL converged genes ---
+# --- Phase C: Within-sample permutation on all converged genes ---
 # Replaces the parametric-bootstrap Phase C from 260503-...R. For each gene
 # with lrt_status == "ok", run permute_dirmult_lrt with adaptive B and
 # return p_value_perm. The per-gene seed is derived from the master seed
@@ -2288,8 +2288,8 @@ if (length(eligible_perm_idx) > 0L) {
 # --- Phase D: Real-data empirical calibration footprint ---
 # Sample N random tested genes, generate one null replicate from each fitted
 # null model, refit, and KS-test the resulting p-values against the uniform.
-# This is an end-to-end calibration check on the *exact* parameter regimes
-# present in the user's data, complementing the synthetic-data Test 16.
+# This is an end-to-end calibration check on the exact parameter regimes
+# present in the data, complementing the synthetic-data Test 16.
 
 calibration_result <- list(
     ks_p = NA_real_, n_used = 0L, n_attempted = 0L
@@ -2316,7 +2316,7 @@ if (opts$calibration_n > 0L) {
         # parLapplyLB (via dispatch_lb) for load balancing; per-gene seeding
         # makes the calibration draw reproducible (it consumes RNG via
         # rgamma/rmultinom). The original pbsapply path inherited the parent
-        # RNG per fork and was NOT reproducible across core counts; seeding
+        # RNG per fork and was not reproducible across core counts; seeding
         # per gene here fixes that. Calibration seed namespace is offset from
         # the permutation seed (+ 7L) so the two phases never share a stream.
         cal_list <- dispatch_lb(cl_d, sample_idx, function(j) {
@@ -2464,14 +2464,14 @@ umis <- tibble(utr_name = utr_names, UMIs = colSums(X)) %>%
 results_df <- results_df %>% left_join(umis, by = "utr_name")
 
 # Filter and adjust p-values: drop NA p-values (skipped, optimization_failed,
-# null_fit_failed, error). These are honestly excluded rather than reported as
+# null_fit_failed, error). These are excluded rather than reported as
 # p = 1 with deviance = 0.
 results_df <- results_df %>%
     filter(!is.na(p_value))
 
 # Restrict BH adjustment to fully-converged genes (converged == TRUE &
 # lrt_status == "ok").  Non-converged genes have unreliable deviance statistics
-# because the optimizer stopped before reaching the true maximum — their
+# because the optimizer stopped before reaching the true maximum - their
 # p-values tend to be artificially small, which inflates the BH threshold and
 # produces spurious discoveries among the converged genes.  Setting padj = NA
 # for non-converged genes keeps them in the output for inspection but excludes
@@ -2494,7 +2494,7 @@ n_conv <- sum(results_df$converged, na.rm = TRUE)
 n_full_conv <- sum(results_df$full_converged, na.rm = TRUE)
 n_ll_viol <- sum(results_df$ll_full < results_df$ll_null - 1e-6, na.rm = TRUE)
 
-# Counts of excluded statuses among ALL processed genes
+# Counts of excluded statuses among all processed genes
 all_status <- vapply(results_list, function(x) extract_chr(x, "lrt_status", "skipped"), character(1))
 n_lrt_failed <- sum(all_status == "optimization_failed")
 n_null_fail <- sum(all_status == "null_fit_failed")
@@ -2550,7 +2550,7 @@ cat("LRT df used: ", paste(sort(unique(results_df$lrt_df)), collapse = ", "), "\
 
 # Save outputs. Tag includes pseudotime_col + covariate_tag + "permutation"
 # marker so different lineages and different batch designs do not overwrite
-# each other AND the LRT output (260503-...R) is not overwritten.
+# each other and the LRT output (260503-...R) is not overwritten.
 pt_tag <- gsub("[^A-Za-z0-9]+", "_", opts$pseudotime_col)
 cov_tag <- gsub("[^A-Za-z0-9]+", "_", covariate_tag)
 tag <- paste0(
@@ -2574,7 +2574,7 @@ saveRDS(list(
     opts = opts
 ), rds_path)
 
-# Run-metadata sidecar: the audit trail reviewers will ask for.
+# Run-metadata sidecar (audit trail of the run).
 metadata <- list(
     script = "260526-permutation_optimized_2.R",
     script_version_hash = tryCatch(
@@ -2624,8 +2624,8 @@ cat("Saved: ", metadata_path, " (audit trail)\n", sep = "")
 # kept) and writes a comparison CSV with per-gene deviance, p_value_chisq, and
 # s_shared at each setting. The expected outcome is that p-values are highly
 # correlated for genes with reasonable cells_per_param, with divergence only
-# for low-power genes where the penalty is doing real work. This addresses
-# the MAP/MLE-mismatch reviewer concern empirically.
+# for low-power genes where the penalty has an effect. This checks
+# the effect of the MAP/MLE mismatch empirically.
 if (opts$lambda_sensitivity) {
     cat("\nPhase E: Lambda sensitivity sweep (lambda in {0, 1, 2})...\n")
     lambda_grid <- c(0, 1, 2)

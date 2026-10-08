@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Driver for 260526-permutation_optimized_2.R (within-sample permutation LRT).
+# Driver for 04_260526-permutation_optimized_2.R (within-sample permutation LRT).
 #
 # Loops over the two Knoblich lineages (inhibitory + excitatory) and runs the
-# permutation LRT script on each.  Mirrors the convention of
-# run_dirmult_all.sh, with permutation-specific env vars added.
+# permutation LRT script on each. Same conventions as
+# 01_run_dirmult_all.sh, with permutation-specific env vars added.
 #
 # Defaults are tuned for the Knoblich dataset on a 26-core box:
-#   SUBSAMPLE_N=6000     (matches what user has been running with the LRT
-#                         notebooks; 0 = no subsampling)
+#   SUBSAMPLE_N=6000     (as in the LRT notebooks;
+#                         0 = no subsampling)
 #   NCORES=26
 #   N_PERM_INIT=49 / N_PERM_MID=199 / N_PERM_MAX=999  (adaptive escalation)
 #
@@ -21,15 +21,15 @@
 #     run.log
 #
 # Usage:
-#   bash run_permutation_all.sh
+#   bash 03_run_permutation_all.sh
 # or with overrides:
-#   NCORES=16 SUBSAMPLE_N=3000 bash run_permutation_all.sh
+#   NCORES=16 SUBSAMPLE_N=3000 bash 03_run_permutation_all.sh
 # =============================================================================
 
 set -euo pipefail
 : "${M26_DATA_ROOT:?Set M26_DATA_ROOT to the data directory (see README)}"
 
-# Pinned env (user's Knoblich convention)
+# Pinned env (values used for the paper)
 NCORES=${NCORES:-26}
 SUBSAMPLE_N=${SUBSAMPLE_N:-6000}
 SEED=${SEED:-42}

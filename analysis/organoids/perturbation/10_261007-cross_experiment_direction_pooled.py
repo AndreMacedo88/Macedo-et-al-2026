@@ -1,7 +1,7 @@
 """Pooled direction agreement between treatment and developmental 3'UTR shifts (Fig. 2G text).
 
 Purpose
-    For the gene-lineage pairs significant in BOTH experiments (cross-experiment overlap:
+    For the gene-lineage pairs significant in both experiments (cross-experiment overlap:
     sig_treat & sig_pseudo in overlap_gene_table_<lin>.csv; 25 INH + 12 EXC = 37 pairs),
     test whether the covariate-adjusted treatment Delta-psi and the developmental
     (pseudotime) delta_psi share the same sign, per lineage and pooled:
@@ -11,15 +11,15 @@ Supports
     Fig. 2G text statistics (pooled: 15/37 same sign, binomial P = 0.324;
     Pearson r = -0.181, P = 0.284; per lineage INH 10/25, EXC 5/12).
 
-Reconstructed on 2026-10-07 to reproduce the pooled direction statistics quoted in the
-    manuscript (no archived file; overlap_direction_pooled.csv is new); original generating
-    code was not archived. Per-lineage rows reproduce the ADJ rows of
+Provenance
+    Written on 2026-10-07; reproduces the pooled direction statistics reported in the paper
+    and stores them in overlap_direction_pooled.csv. Per-lineage rows reproduce the ADJ rows of
     cross_experiment_overlap/overlap_direction_agreement_adjusted.csv.
 
 Inputs (KB = $M26_DATA_ROOT/3utr/organoids/knoblich/utrcalling)
     KB/dirmult_treatment_results/cross_experiment_overlap/overlap_gene_table_<lin>.csv
     KB/dirmult_treatment_results/<lin>/main_only/delta_psi_treatment_adjusted_<lin>.csv
-        (from 261007-make_adjusted_dpsi.py; column delta_psi_treatment_adjusted)
+        (from 04_261007-make_adjusted_dpsi.py; column delta_psi_treatment_adjusted)
     KB/composite_ranking/composite_ranking_optimized2_<lin>.csv (column delta_psi, matched
         on gene_name == overlap symbol)
 
@@ -28,8 +28,8 @@ Output (default KB/dirmult_treatment_results/cross_experiment_overlap/)
     n_pairs, same_sign, sign_concordance, binom_p_two_sided, pearson_r, pearson_p,
     spearman_rho, spearman_p
 
-Run (conda env downstr)
-    conda run -n downstr python 261007-cross_experiment_direction_pooled.py [--outdir DIR]
+Run (conda env apa-python)
+    conda run -n apa-python python 10_261007-cross_experiment_direction_pooled.py [--outdir DIR]
 """
 
 import argparse

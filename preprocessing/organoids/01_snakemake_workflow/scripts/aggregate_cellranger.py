@@ -2,7 +2,7 @@
 
 Merges the matrices, rewrites per-sample barcode suffixes (-N) Cell Ranger
 aggr-style, and uses Ensembl gene IDs as var_names. Cell-level metadata is
-NOT added here; the `annotate_cells` rule handles that downstream so there's
+not added here; the `annotate_cells` rule handles that downstream so there's
 one canonical join point.
 """
 import argparse

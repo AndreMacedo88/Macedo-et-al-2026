@@ -2,22 +2,22 @@
 # =============================================================================
 # Siblings within-family LOPO: reproducibility of the pooled AUC (2026-07-10)
 # =============================================================================
-# The S5i LOPO (260703) and the "full LOFO" (script 04 baseline) are the SAME model
+# The supp_9 LOPO (09-260703) and the "full LOFO" (script 04 baseline) are the same model
 # (paired-DRIMSeq ~family+Diagnosis top-50 per fold + ridge cv.glmnet alpha=0,
 # lambda.min; roc direction="<"). The only difference is the RNG stream feeding
-# cv.glmnet's INTERNAL cross-validation fold assignment, which picks lambda.min.
+# cv.glmnet's internal cross-validation fold assignment, which picks lambda.min.
 # With n=18 held-out samples one reordered case/control pair moves the pooled AUC
 # by ~1/81 ~ 0.012, so the value wobbles ~0.79-0.82 across seeds.
 #
 # This script (a) confirms the DRIMSeq feature ranking is deterministic, (b) maps the
-# AUC distribution over many seeds so we know the TRUE central value (and where 0.79 /
-# 0.815 fall), and (c) provides PRINCIPLED DETERMINISTIC estimators that remove the
-# seed lottery WITHOUT changing the model or cherry-picking a seed:
+# AUC distribution over many seeds to find the central value (and where 0.79 /
+# 0.815 fall), and (c) provides deterministic estimators that remove the
+# seed dependence without changing the model or choosing a seed:
 #   - LOOCV internal CV (nfolds = n_train): cv.glmnet foldid = 1:n -> no RNG at all.
-#   - seed-averaged ENSEMBLE: mean predicted prob over many random-fold repeats.
-# Both are reported with bootstrap and DeLong 95% CIs. We adopt whichever is defensible;
-# we do NOT hand-pick a favourable seed.
-# Env: conda R_downstream.
+#   - seed-averaged ensemble: mean predicted prob over many random-fold repeats.
+# Both are reported with bootstrap and DeLong 95% CIs;
+# no seed is hand-picked.
+# Env: conda apa-r.
 # =============================================================================
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
@@ -100,7 +100,7 @@ boot_ci <- function(y, p) {
   quantile(bs, c(.025, .975), na.rm = TRUE)
 }
 
-# ---- (a) seed distribution (default nfolds=10, the historical setup) ----
+# ---- (a) seed distribution (default nfolds=10, as in the original runs) ----
 cat(sprintf("\nseed sweep (N=%d, nfolds=10 default) ...\n", N_SEED))
 seed_auc <- numeric(N_SEED); prob_sum <- setNames(rep(0, nrow(meta_all)), meta_all$sample_id)
 for (s in seq_len(N_SEED)) {
@@ -112,14 +112,14 @@ cat("  quantiles [min,2.5,25,50,75,97.5,max]:\n  "); cat(sprintf("%.3f ", qs)); 
 cat(sprintf("  percentile of 0.790 = %.0f%% ; of 0.815 = %.0f%%\n",
             100*mean(seed_auc <= 0.790), 100*mean(seed_auc <= 0.815)))
 
-# ---- (b) seed-averaged ENSEMBLE (deterministic given the seed set 1..N) ----
+# ---- (b) seed-averaged ensemble (deterministic given the seed set 1..N) ----
 prob_ens <- prob_sum / N_SEED
 a_ens <- auc1(y_all, prob_ens); ci_ens <- boot_ci(y_all, prob_ens)
 del_ens <- as.numeric(pROC::ci.auc(pROC::roc(y_all, prob_ens, levels = c("CTRL","ASD"), direction = "<", quiet = TRUE)))
 cat(sprintf("\nENSEMBLE (mean prob over %d seeds): AUC=%.3f  boot95=[%.3f,%.3f]  DeLong95=[%.3f,%.3f]\n",
             N_SEED, a_ens, ci_ens[1], ci_ens[2], del_ens[1], del_ens[3]))
 
-# ---- (c) LOOCV internal CV (deterministic; NO RNG) ----
+# ---- (c) LOOCV internal CV (deterministic; no RNG) ----
 set.seed(1)  # irrelevant: nfolds=n_train -> foldid fixed
 prob_loo <- lopo_probs(nfolds = 16L)   # 16 training samples per fold -> LOOCV
 a_loo <- auc1(y_all, prob_loo); ci_loo <- boot_ci(y_all, prob_loo)

@@ -1,6 +1,6 @@
 """Build samples.tsv from the E-MTAB-13148 SDRF.
 
-Fetches the SDRF, keeps only GEX rows (drops AMPLICON libraries — those are
+Fetches the SDRF, keeps only GEX rows (drops AMPLICON libraries - those are
 gRNA / CHOOSE-clone-barcode amplicons used for CRISPR demultiplexing, not
 full-transcriptome data), groups by library, cross-references
 metadata.tsv to determine the Zenodo library name, and writes a samples.tsv

@@ -177,7 +177,7 @@ def estimate_best_bandwidth(adata, method="kde", genome=None, hamming=1,
 
 def pas_distance(adata, genome, hamming=1):
     """
-    Calculates the distance of each read to the nearest polyadenilation hexamer site
+    Calculates the distance of each read to the nearest polyadenylation hexamer site
     AATAAA.
 
     Args:

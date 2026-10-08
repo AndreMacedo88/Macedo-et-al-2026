@@ -7,24 +7,24 @@
 # Supports: Fig. 2E (Reactome / DisGeNET ORA of developmentally regulated
 #   3'UTR genes, INH; EXC counterpart for supplement / text).
 #
-# Reconstructed on 2026-10-07 to reproduce
-#   ORA/chisq_perm_intersection/ora_{reactome,dgn}_{inhibitory,excitatory}_neglog10pval_chisqperm.rds;
-#   original generating code was not archived. The gene filtering, Entrez
-#   mapping and enrichment calls follow 260506-knoblich_enrichment_analyses.ipynb
+# Rewritten on 2026-10-07; reproduces the stored
+#   ORA/chisq_perm_intersection/ora_{reactome,dgn}_{inhibitory,excitatory}_neglog10pval_chisqperm.rds.
+#   The gene filtering, Entrez
+#   mapping and enrichment calls follow 14_260506-knoblich_enrichment_analyses.ipynb
 #   (chi-square-only ORA); only the foreground definition differs.
 #
 # Foreground / background (per lineage):
 #   1. composite_ranking_optimized2_<lin>.csv, filtered exactly as in
-#      260506-knoblich_enrichment_analyses.ipynb: converged genes, no
+#      14_260506-knoblich_enrichment_analyses.ipynb: converged genes, no
 #      comma-separated gene_id, leading '|' stripped from gene_name, rows whose
 #      gene_name still contains '|' removed.
-#   2. padj_chisq is RECOMPUTED (BH) on p_value_chisq over this filtered set
-#      (NOT the padj / padj_chisq columns of the composite CSV -- using those
+#   2. padj_chisq is recomputed (BH) on p_value_chisq over this filtered set
+#      (not the padj / padj_chisq columns of the composite CSV; using those
 #      makes the INH foreground 12 genes too large).
 #   3. The within-sample permutation p-value (p_value_perm, joined by gene_id)
-#      is BH-adjusted over the same filtered set (NOT the padj column of the
-#      permutation CSV -- using that makes the EXC foreground too large).
-#   4. Foreground = Entrez IDs of genes with padj_chisq < 0.05 AND
+#      is BH-adjusted over the same filtered set (not the padj column of the
+#      permutation CSV; using that makes the EXC foreground too large).
+#   4. Foreground = Entrez IDs of genes with padj_chisq < 0.05 and
 #      padj_perm < 0.05 (INH 169, EXC 565 Entrez IDs).
 #      Background = all Entrez IDs of the filtered set (INH 8,341; EXC 9,655).
 #   Entrez mapping: org.Hs.eg.db, ENSEMBL -> ENTREZID, multiVals = "first".
@@ -40,8 +40,8 @@
 #   ora_reactome_<lin>_neglog10pval_chisqperm.rds  (enrichResult)
 #   ora_dgn_<lin>_neglog10pval_chisqperm.rds       (enrichResult)
 #
-# Run (conda env R_downstream):
-#   conda run -n R_downstream Rscript 261007-pseudotime_ora_chisq_perm_intersection.R \
+# Run (conda env apa-r):
+#   conda run -n apa-r Rscript 15_261007-pseudotime_ora_chisq_perm_intersection.R \
 #     [--outdir <dir>] [--lineages inhibitory,excitatory]
 #
 # Verified 2026-10-07 (clusterProfiler 4.14.0, ReactomePA 1.50.0, DOSE 4.0.0,
@@ -87,7 +87,7 @@ parse_args <- function(args) {
   opts
 }
 
-# Filtering identical to load_and_filter() in 260506-knoblich_enrichment_analyses.ipynb
+# Filtering identical to load_and_filter() in 14_260506-knoblich_enrichment_analyses.ipynb
 load_and_filter <- function(lin) {
   path <- file.path(KB, "composite_ranking", sprintf("composite_ranking_optimized2_%s.csv", lin))
   dm <- read_csv(path, show_col_types = FALSE) |>

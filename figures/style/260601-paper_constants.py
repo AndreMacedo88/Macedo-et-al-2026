@@ -17,7 +17,7 @@ mycolorscheme = {
 }
 
 # ──────────────────────────────────────────────────────────────────────
-# paper_palette_celltypes — cell-type colours matched to THIS project's
+# paper_palette_celltypes - cell-type colours matched to this project's
 # actual obs["celltype"] strings, for the 2026 ASD paper figures.
 # Derived from `mycolorscheme` above with two corrections:
 #   * the source palette had a single "aNSC"; this project has aNSC1 + aNSC2,
@@ -27,11 +27,11 @@ mycolorscheme = {
 #     "oligodendrocyte" -> "Oligodendrocytes").
 # Cell types present in the data but absent from the source palette
 # (Microglia, Ependymal cells, Endothelial cells, OPC,
-#  Olfactory Ensheathing cells, ROB_qNSC2) are intentionally omitted and
+#  Olfactory Ensheathing cells, ROB_qNSC2) are omitted and
 # fall back to the neutral non-lineage gray in the panels.
 # ──────────────────────────────────────────────────────────────────────
 paper_palette_celltypes = {
-    # neurogenic lineage (coloured in Figure 1 panels A, C, E)
+    # neurogenic lineage (coloured in fig. S1A and Fig. 1C, 1E)
     "qNSC1": "#9955ff",
     "qNSC2": "#0047ab",
     "aNSC1": "#ff1e1d",
@@ -51,7 +51,7 @@ paper_palette_celltypes = {
 #   Astrocytes (excluded from both lineages) -> neutral gray.
 # Keys match obs["celltype"] exactly.
 # ──────────────────────────────────────────────────────────────────────
-# Colours are a light->dark hue ramp that MUST track the corrected differentiation
+# Colours are a light-to-dark hue ramp that must follow the differentiation
 # order (ORGANOID_EXC_ORDER / ORGANOID_INH_ORDER in paper_fig_style): lightest =
 # progenitor, darkest = most-differentiated neuron. Keys are listed in that order so
 # the ramp stays in sync; do not reorder keys without re-pairing the hex ramp.

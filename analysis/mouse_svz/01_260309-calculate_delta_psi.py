@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Delta Psi (Δψ) — Rank-Weighted Proportion Shift for 3'UTR Isoform Usage.
+Delta Psi (Δψ) - Rank-Weighted Proportion Shift for 3'UTR Isoform Usage.
 
 Adapts the PSI (Percent Spliced In) framework to APA: for each gene with K UTR
 sites ordered by utr_size, assigns normalized ranks r_k = (k-1)/(K-1), fits
@@ -9,13 +9,13 @@ softmax), and computes a signed scalar in [-1, 1] summarizing the direction
 and magnitude of UTR length change along pseudotime.
 
 Effect size metrics per gene:
-  - delta_psi:     W(t_late) - W(t_early)  — overall endpoint change
-  - delta_psi_max: max(W) - min(W)         — max trajectory range
-  - nmi:           1 - |delta_psi|/|delta_psi_max| — non-monotonicity index in [0, 1]
+  - delta_psi:     W(t_late) - W(t_early) (overall endpoint change)
+  - delta_psi_max: max(W) - min(W) (maximum trajectory range)
+  - nmi:           1 - |delta_psi|/|delta_psi_max| (non-monotonicity index in [0, 1])
   - t_at_max/min:  where W(t) peaks/troughs along pseudotime
 
 Usage:
-  python 260309-calculate_delta_psi.py <input.h5ad> [options]
+  python 01_260309-calculate_delta_psi.py <input.h5ad> [options]
 """
 
 import argparse
@@ -269,7 +269,7 @@ def process_gene(args):
             )
 
     except Exception as e:
-        # GLM convergence or numerical failure — return NaN
+        # GLM convergence or numerical failure - return NaN
         for j in range(n_sites):
             result_sites.append(
                 {
@@ -413,14 +413,14 @@ def build_gene_index(var_df, gene_col):
 
 
 def run_discrete_mode(adata, args, output_dir):
-    """Δψ between two DISCRETE cell groups (e.g. NB vs Neurons).
+    """Δψ between two discrete cell groups (e.g. NB vs Neurons).
 
     Rationale: when the two states are disconnected on the manifold (no usable
-    continuous pseudotime between them), a continuous spline is indefensible.
+    continuous pseudotime between them), a continuous spline is not appropriate.
     Here Δψ = W(late) - W(early), with W = sum_k r_k * pi_k and r_k the same
-    rank-normalised UTR position used in pseudotime mode. pi_k is the EMPIRICAL
+    rank-normalised UTR position used in pseudotime mode. pi_k is the empirical
     UTR-site usage proportion of a group, pooled within each batch and then
-    averaged across batches with EQUAL weight (breaks the batch/group confound
+    averaged across batches with equal weight (breaks the batch/group confound
     when the late group is concentrated in a few batches). No GLM, no p-value:
     Δψ is reported as a bounded effect size only.
     """

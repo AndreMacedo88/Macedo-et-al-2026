@@ -1,25 +1,25 @@
 #!/usr/bin/env -S Rscript --vanilla
 # ---------------------------------------------------------------------------
-# Stratified 10-fold CV counterpart of the definitive LOBO classifier.
+# Stratified 10-fold CV counterpart of the final LOBO classifier.
 #
-# Everything is IDENTICAL to the definitive LOBO run
-#   (Classifications/2025/LOBO_CV/260613-LOBOCV_genelevel_curated_sexadj_ridge.R)
+# Everything is identical to the final LOBO run
+#   (03-260613-LOBOCV_genelevel_curated_sexadj_ridge.R)
 #   - same data     : gene-level bw12 curated cohort (status_split Train+Test_original, n=71)
 #   - same features : DRIMSeq ~Batch+Sex+Diagnosis vs null ~Batch+Sex, top-50 by pvalue,
-#                     re-selected INSIDE each training fold (no leakage), genewise precision
+#                     re-selected inside each training fold (no leakage), genewise precision
 #   - same model    : cv.glmnet ridge (alpha=0) on the selected features' proportions
-#   - same metric   : POOLED out-of-fold ROC AUC + 95% CI (never the per-fold mean)
-# The ONLY change is the fold scheme: leave-one-batch-out  ->  stratified (by Diagnosis)
+#   - same metric   : pooled out-of-fold ROC AUC + 95% CI (never the per-fold mean)
+# The only change is the fold scheme: leave-one-batch-out  ->  stratified (by Diagnosis)
 # random 10-fold CV. Because folds now mix batches, same-batch samples appear in both train
-# and test, so this is the OPTIMISTIC (batch-leaky) counterpart; the gap to the LOBO AUC
-# quantifies how much of the LOBO signal is batch structure vs genuine cross-batch signal.
+# and test, so this is the optimistic (batch-leaky) counterpart; the gap to the LOBO AUC
+# quantifies how much of the LOBO signal is batch structure vs cross-batch signal.
 #
-# Repeated CV (many partitions, different seeds) shows the split is not lucky. Each partition
-# is expensive (genewise DRIMSeq ~3-4 min/fold), so partitions are computed as INDEPENDENT
+# Repeated CV (many partitions, different seeds) checks that the result is not split-specific. Each partition
+# is expensive (genewise DRIMSeq ~3-4 min/fold), so partitions are computed as independent
 # processes and pooled afterwards:
-#   partition mode:  Rscript THIS.R partition <rep_id> <seed>   -> saves one partition rds
-#   aggregate mode:  Rscript THIS.R aggregate <n_repeats>       -> pools + plots + LOBO compare
-# Repeat 1 (seed 123) is the headline partition. CV_WORKERS env var caps BiocParallel workers
+#   partition mode:  Rscript this.R partition <rep_id> <seed>   -> saves one partition rds
+#   aggregate mode:  Rscript this.R aggregate <n_repeats>       -> pools + plots + LOBO compare
+# Repeat 1 (seed 123) is the main partition. CV_WORKERS env var caps BiocParallel workers
 # per process so many partitions can run concurrently without oversubscribing the machine.
 # ---------------------------------------------------------------------------
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
@@ -49,7 +49,7 @@ suppressMessages(box::use(
   pROC[auc, roc, ci.auc]
 ))
 suppressMessages(library(magrittr))
-# standalone Rscript (--vanilla): point reticulate at the R_downstream env python (has anndata)
+# standalone Rscript (--vanilla): point reticulate at the apa-r env python (has anndata)
 Sys.setenv(
   RETICULATE_PYTHON = Sys.which("python")
 )
@@ -119,7 +119,7 @@ fmet <- function(truth, prob) {
   )
 }
 
-# stratified k-fold: fold ids assigned WITHIN each Diagnosis class -> balanced classes per fold
+# stratified k-fold: fold ids assigned within each Diagnosis class -> balanced classes per fold
 make_strat_folds <- function(y, k, seed) {
   set.seed(seed)
   fold <- integer(length(y))
@@ -292,7 +292,7 @@ run_one_partition <- function(D, rep_id, seed) {
   )
 }
 
-# --- PARTITION MODE -------------------------------------------------------
+# --- Partition mode -------------------------------------------------------
 if (MODE == "partition") {
   rep_id <- as.integer(args[2])
   seed <- as.integer(args[3])
@@ -328,7 +328,7 @@ if (MODE == "partition") {
     nrow(res$preds)
   ))
 
-  # --- AGGREGATE MODE -------------------------------------------------------
+  # --- Aggregate mode -------------------------------------------------------
 } else if (MODE == "aggregate") {
   n_rep <- as.integer(args[2])
   files <- sort(list.files(

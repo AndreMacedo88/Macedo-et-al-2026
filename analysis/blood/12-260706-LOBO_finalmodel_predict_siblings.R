@@ -1,22 +1,22 @@
 #!/usr/bin/env -S Rscript --vanilla
 # ---------------------------------------------------------------------------
-# Train the DEFINITIVE case-control blood classifier on ALL 71 curated samples
-# (the LOBO "consensus" model) and apply it to the 9 in-house sibling PAIRS.
+# Train the final case-control blood classifier on all 71 curated samples
+# (the LOBO "consensus" model) and apply it to the 9 in-house sibling pairs.
 #
 # Rationale: the LOBO cross-validation reports out-of-fold performance but never
 # saves a single all-data model. Here we fit that final model once - identical
-# pipeline to the definitive LOBO (gene-level, curated, DRIMSeq ~Batch+Sex+Diagnosis
+# pipeline to the final LOBO (gene-level, curated, DRIMSeq ~Batch+Sex+Diagnosis
 # feature selection, top-50, ridge) - and use it to predict the 18 discordant-sibling
-# samples, which were NEVER in the case-control cohort (independent siblings_seq batches).
+# samples, which were never in the case-control cohort (independent siblings_seq batches).
 #
-# This is a strong age control: within each sibling pair AGE IS MATCHED (mean |gap| 2.8 y),
+# This is a strong age control: within each sibling pair age is matched (mean |gap| 2.8 y),
 # and both members are young. If the classifier were merely an age detector it could not tell
 # proband from sibling (both young -> both look "ASD-like") and the within-pair ranking would be
 # ~chance. If it ranks the ASD proband above the unaffected sibling, it is detecting an
-# ASD-specific signal beyond age. NB the ABSOLUTE prob_ASD may be biased high for both members
-# (the case-control model learned ASD~young); the WITHIN-PAIR ordering is the age-controlled read.
+# ASD-specific signal beyond age. NB the absolute prob_ASD may be biased high for both members
+# (the case-control model learned ASD~young); the within-pair ordering is the age-controlled read.
 #
-# Env: conda R_downstream.
+# Env: conda apa-r.
 # ---------------------------------------------------------------------------
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
@@ -121,7 +121,7 @@ counts_tr <- round(rc$Xfs[, train_ids, drop = FALSE])
 props <- rp$Xfs
 props[is.nan(props)] <- 0
 
-# --- DRIMSeq feature selection on the full 71 (identical to definitive LOBO) ---
+# --- DRIMSeq feature selection on the full 71 (identical to the final LOBO) ---
 cdf <- data.frame(
   gene_id = gene_id,
   feature_id = feature_id,

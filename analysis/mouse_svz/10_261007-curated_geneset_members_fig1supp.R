@@ -1,11 +1,11 @@
-# Curated functional gene-set membership for fig. S1J (mouse adult SVZ, optimized method 2)
+# Curated functional gene-set membership for fig. S1I (mouse adult SVZ, optimized method 2)
 #
 # Purpose:
 #   Define the three curated functional gene sets whose mean 3'UTR-length index W(t) is
-#   plotted along pseudotime in fig. S1J (paper_2026_ASD/Fig1/supp_4_exemplars_genesets.ipynb,
+#   plotted along pseudotime in fig. S1I (figures/fig1/supp_4_exemplars_genesets.ipynb,
 #   cell "S4b"). Each set is the union of the ORA foreground genes (geneID column) of the
 #   curated GO BP terms shown in the Fig. 1 biological-process panel
-#   (260412-figure1_panels_R.ipynb, `curated_bio`), taken from the base chi-square-only GO
+#   (Fig. 1F, figures/fig1/fig1f_bp_enrichment.ipynb, `curated_bio`), taken from the base chi-square-only GO
 #   ORA (foreground = padj_chisq < 0.05). Genes keep their order of first appearance
 #   (terms in the order listed below; within a term, the ORA geneID order = rank order).
 #     RNA processing   (119 genes): regulation of RNA splicing; RNA splicing;
@@ -15,17 +15,17 @@
 #     Proteostasis     (156 genes): ubiquitin-dependent protein catabolic process;
 #                                   cytoplasmic translation
 #
-# Supports: fig. S1J (functional gene-set W(t) trajectories).
+# Supports: fig. S1I (functional gene-set W(t) trajectories).
 #
 # Input:
 #   DirMult_optimized/ORA/ora_go_neglog10pval_chisq_optimized2.rds
-#     (written by 260411-optimized2_enrichment_analyses.ipynb)
+#     (written by 08_260411-optimized2_enrichment_analyses.ipynb)
 #
 # Output (default: DirMult_optimized/ORA/):
 #   curated_geneset_members_fig1supp.csv (columns: category, gene_name)
 #
 # How to run:
-#   conda run -n R_downstream Rscript 261007-curated_geneset_members_fig1supp.R [--outdir DIR] [--overwrite]
+#   conda run -n apa-r Rscript 10_261007-curated_geneset_members_fig1supp.R [--outdir DIR] [--overwrite]
 #
 # Reconstructed on 2026-10-07 to reproduce DirMult_optimized/ORA/curated_geneset_members_fig1supp.csv;
 # original generating code was not archived. The rule above reproduces the archived file

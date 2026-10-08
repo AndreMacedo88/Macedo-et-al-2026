@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Driver for 260526-permutation_optimized_2.R (within-sample permutation LRT).
+# Driver for 03_260526-permutation_optimized_2.R (within-sample permutation LRT).
 # Mouse SVZ.
 #
 # The mouse trajectory has a single lineage (no per-lineage split), so this
@@ -13,8 +13,8 @@
 #   - One invocation (no lineage loop).
 #   - SUBSAMPLE_N=0 by default (use full data; ~14k cells is fine at 26 cores).
 #   - Pseudotime column is `dpt_pseudotime` (no lineage suffix).
-#   - permutation_block_col is `sample_id` (6 samples; equivalent to the
-#     "6 batches" mentioned in CLAUDE.md).
+#   - permutation_block_col is `sample_id` (6 samples, 1-to-1 with the
+#     6 batches).
 #
 # Defaults are tuned for the mouse dataset on a 26-core box:
 #   SUBSAMPLE_N=0        (no subsampling; mouse has ~14k cells which is fine)
@@ -30,9 +30,9 @@
 #     run.log
 #
 # Usage:
-#   bash run_permutation_all.sh
+#   bash 03_run_permutation_all.sh
 # or with overrides:
-#   NCORES=16 SUBSAMPLE_N=8000 bash run_permutation_all.sh
+#   NCORES=16 SUBSAMPLE_N=8000 bash 03_run_permutation_all.sh
 # =============================================================================
 
 set -euo pipefail

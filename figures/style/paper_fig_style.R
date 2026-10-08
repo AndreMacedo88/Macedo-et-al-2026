@@ -33,7 +33,7 @@ FONT_LEGEND_TITLE <- 6
 FONT_ANNOT <- 6
 LAYOUT_DPI <- 300
 
-# ── output root (the 3utr data tree, NOT the notebooks git repo) ────────
+# ── output root (the 3utr data tree, not the notebooks git repo) ────────
 OUT_ROOT <- Sys.getenv("M26_RESULTS_ROOT", file.path(.paper_style_dir, "..", "..", "results"))
 
 # ── Nature column grid (single source of truth for panel widths) ─────────
@@ -49,10 +49,10 @@ FULL_W_IN <- FULL_W_MM / 25.4   # 6.8504 in -> 174 mm
 # (mirror of paper_fig_style.py; see that file for the full explanation).
 # Panels tile within the page separated by a fixed GAP_MM gutter, so any set of
 # spans that adds up to a whole grid fills the extent exactly:
-#     HALF    + gap + HALF          = FULL   (85 + 4 + 85 = 174)
-#     QUARTER + gap + THREEQUARTER  = FULL ;   THIRD + gap + TWOTHIRD = FULL
-# quarter/half/full are ONE nested base-4 grid (mix freely on a row); thirds are
-# a SEPARATE base-3 grid (put thirds only next to thirds). Heights use the page's
+#     half    + gap + half          = full   (85 + 4 + 85 = 174)
+#     quarter + gap + threequarter  = full ;   third + gap + twothird = full
+# quarter/half/full are one nested base-4 grid (mix freely on a row); thirds are
+# a separate base-3 grid (put thirds only next to thirds). Heights use the page's
 # max height (FULL_H_MM) as the full extent for a consistent vertical rhythm.
 # To reshuffle a panel just swap the *_W_IN / *_H_IN constant it uses; for any
 # division not named here call grid_w_in(span, ncols) / grid_h_in(span, nrows).
@@ -69,8 +69,8 @@ grid_w_in <- function(span, n, gap = GAP_MM) mm_to_in(grid_w_mm(span, n, gap))
 grid_h_in <- function(span, n, gap = GAP_MM) mm_to_in(grid_h_mm(span, n, gap))
 
 # named column widths (mm) -- HALF_W_MM / FULL_W_MM defined above
-# EIGHTH is the next rung of the SAME nested base-2 ladder as quarter/half/full
-# (2*EIGHTH + gap = QUARTER), so it mixes freely with them.
+# Eighth is the next rung of the same nested base-2 ladder as quarter/half/full
+# (2*eighth + gap = quarter), so it mixes freely with them.
 EIGHTH_W_MM       <- grid_w_mm(1, 8)   # 18.25 mm
 QUARTER_W_MM      <- grid_w_mm(1, 4)   # 40.5 mm
 THIRD_W_MM        <- grid_w_mm(1, 3)   # 55.33 mm
@@ -98,7 +98,7 @@ TWOTHIRD_H_IN     <- mm_to_in(TWOTHIRD_H_MM)
 THREEQUARTER_H_IN <- mm_to_in(THREEQUARTER_H_MM)
 FULL_H_IN         <- mm_to_in(FULL_H_MM)
 
-# consistency guardrails: the nested base-2 grid must reproduce the anchors
+# consistency checks: the nested base-2 grid must reproduce the anchors
 stopifnot(
     abs(grid_w_mm(2, 4) - HALF_W_MM) < 1e-9,
     abs(grid_w_mm(4, 4) - FULL_W_MM) < 1e-9,

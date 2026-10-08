@@ -1,6 +1,6 @@
 # The utrcalling package itself is not on PyPI: after creating this environment, install it from
 # [[GitHub URL of the tool]] (see the README). The paper used version 2.5.3 (mouse) and 3.1.10 (organoids, blood).
-name: utrcalling
+name: apa-utrcalling
 channels:
   - conda-forge
   - bioconda

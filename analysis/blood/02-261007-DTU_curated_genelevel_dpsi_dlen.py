@@ -3,7 +3,7 @@
 
 Purpose
     Effect-size companions to the gene-level DRIMSeq DTU
-    (261007-DTU_curated_genelevel_unadj.R) for the curated 71-sample cohort
+    (01-261007-DTU_curated_genelevel_unadj.R) for the curated 71-sample cohort
     (obs status_split in {Train, Test_original}; 40 ASD / 31 CTRL):
       * gene_dpsi_curated.csv  - Delta-psi: per sample and gene,
             W = sum_k x_k * r_k / sum_k x_k,   r_k = (rank(site position) - 1) / (K - 1)
@@ -17,9 +17,8 @@ Purpose
     All 8,338 genes are reported (2 genes are NaN: no counts in one diagnosis group).
 
 Supports
-    Fig. 4B (volcano x-axis / lengthening direction of the 81 primary DTU genes) and
-    fig. S4C; also read by 260614-DTU_primary_vs_confound_sensitivity.ipynb,
-    260614-crosstissue_convergence.ipynb, 260615-within_family_systematic_apa.ipynb.
+    Fig. 4B (volcano x-axis and direction of the 81 DTU genes) and fig. S4C; also read by
+    figures/fig4/fig5c_convergence.ipynb and analysis/blood/07-260615-within_family_systematic_apa.ipynb.
 
 Inputs
     $M26_DATA_ROOT/3utr/Blood/all_till_20240724/utrcalling/
@@ -29,16 +28,16 @@ Outputs (default outdir = $M26_DATA_ROOT/3utr/Blood/2025_analyses/DTU_curated_se
     gene_dpsi_curated.csv (gene_id, dpsi), gene_dlen_curated.csv (gene_id, dlen).
     Existing files are never overwritten unless --overwrite is given.
 
-How to run (conda env downstr; < 1 min)
-    conda run -n downstr python 261007-DTU_curated_genelevel_dpsi_dlen.py --outdir /path/to/scratch
+How to run (conda env apa-python; < 1 min)
+    conda run -n apa-python python 02-261007-DTU_curated_genelevel_dpsi_dlen.py --outdir /path/to/scratch
 
 Provenance
     Reconstructed on 2026-10-07 to reproduce DTU_curated_sexadj/gene_dpsi_curated.csv
     (2026-06-15) and gene_dlen_curated.csv (2026-06-14); original generating code was
-    not archived. The W computation follows 260615-within_family_systematic_apa.ipynb.
+    not archived. The W computation follows 07-260615-within_family_systematic_apa.ipynb.
     Verification (2026-10-07): both CSVs are byte-identical to the archived files (cmp).
     Bitwise identity depends on the exact float path used here: float32 proportions with
-    float32 per-gene sums for dlen, and selecting group columns by sample LABEL (not a
+    float32 per-gene sums for dlen, and selecting group columns by sample label (not a
     boolean mask) before .mean(axis=1); other summation orders differ by <= 1e-12.
 """
 

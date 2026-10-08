@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Run the PRIMARY treatment-effect screen (main-only, no interaction term).
+# Run the primary treatment-effect screen (main-only, no interaction term).
 # One invocation per lineage (inhibitory, excitatory).
 #
 # Tests one LRT per gene per lineage:
@@ -13,19 +13,19 @@
 # repaired to common precision (typically affects ~150 high-K genes out of
 # ~5,000-7,500 post-filter).
 #
-# Companion methods document:
-#   260511-drimseq_treatment_methods.md (Sections 4, 7, 11)
+# Settings (env vars): see the configuration block below. Defaults are the
+# values used for the paper.
 #
 # Usage:
-#   bash run_treatment_main.sh                            # defaults
-#   NCORES=26 SPLINE_DF=5 N_BINS=8 bash run_treatment_main.sh
-#   BOOTSTRAP_B=199 NCORES=26 bash run_treatment_main.sh   # supplementary
+#   bash 01_run_treatment_main.sh                         # defaults
+#   NCORES=26 SPLINE_DF=5 N_BINS=8 bash 01_run_treatment_main.sh
+#   BOOTSTRAP_B=199 NCORES=26 bash 01_run_treatment_main.sh   # supplementary
 #
-# Tunables (env vars): see comments in the body. Defaults match
-# 260511-drimseq_treatment_methods.md unless overridden.
+# The induced arm is restricted to cells with a targeting guide
+# (--require_targeting_guide TRUE); uninduced cells are kept regardless of guide.
 #
 # Outputs under <RESULTS_ROOT>/<lineage_slug>/main_only/:
-#   drimseq_gene_<lineage>_treatment_main.csv         (PRIMARY -- single LRT)
+#   drimseq_gene_<lineage>_treatment_main.csv         (primary, single LRT)
 #   drimseq_feature_diagnostic_<lineage>_treatment_main.csv
 #   delta_psi_treatment_gene_<lineage>.csv
 #   delta_psi_treatment_feature_<lineage>.csv

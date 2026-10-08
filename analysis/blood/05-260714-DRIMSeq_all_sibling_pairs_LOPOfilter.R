@@ -1,35 +1,35 @@
 #!/usr/bin/env -S Rscript --vanilla
 # =============================================================================
-# DRIMSeq DTU on ALL 9 in-house sibling PAIRS (18 samples) - supp_8 / S5h method
-# (genewise precision, gene-level results, paired ~family+Diagnosis) RE-RUN AT THE
-# LOPO EXPRESSION FILTER (and, for context, across the full filter sweep).
+# DRIMSeq DTU on all 9 in-house sibling pairs (18 samples): supp_8 (Fig. 4D, 4E) method
+# (genewise precision, gene-level results, paired ~family+Diagnosis) re-run at the
+# LOPO expression filter (and, for context, across the full filter sweep).
 # -----------------------------------------------------------------------------
-# WHY THIS EXISTS. supp_8 (Fig5/supp_8_within_family_drimseq.ipynb) reports 8 genes
-# adj-p<0.05 from a now-lost generator that used a LENIENT expression filter. The
-# reconciliation note 260714-DRIMSeq_fold_vs_supp8_reconciliation.md shows that the
-# supp_8 method combined with the TIGHTER LOPO filter is a valid independent-filtering
-# refinement that recovers MORE genes after BH (8 -> ~20). This script regenerates that
-# exact result from scratch (no guessing) and stores it.
+# Background. An earlier version of supp_8 (figures/fig4/supp_8_within_family_drimseq.ipynb)
+# reported 8 genes adj-p<0.05 from an unarchived script with a lenient expression filter.
+# The filter sweep below shows that the
+# supp_8 method combined with the tighter LOPO filter is a valid independent-filtering
+# refinement that recovers more genes after BH (8 -> ~20). This script regenerates that
+# result from scratch and stores it.
 #
-# HEADLINE OUTPUT = the LOPO-filter run:
-#   drimseq_allpairs_genelevel_LOPOfilter.csv   (gene-level, the supp_8 re-run; ~20 adj<0.05)
+# Main output = the LOPO-filter run:
+#   drimseq_allpairs_genelevel_LOPOfilter.csv   (gene-level, used by supp_8; ~20 adj<0.05)
 #   drimseq_allpairs_featurelevel_LOPOfilter.csv
-# CONTEXT OUTPUT = the same method across 5 filters (very_lenient .. tightest), one
+# Context output = the same method across 5 filters (very_lenient .. tightest), one
 #   gene-level table per filter (genelevel_<filter>.csv) + a long significant-gene table
 #   (sig_genes_by_filter.csv) that the overlap notebook
-#   260714-filtersweep_vs_LOPO_overlap_analysis.ipynb consumes.
+#   260714-filtersweep_vs_LOPO_overlap_analysis.ipynb (not included) reads.
 #
-# METHOD (matches supp_8; the ONLY non-default is prec_moderation="none", which is
-#   required because the default "trended" loess crashes on this tiny 18-sample design;
-#   this same setting reproduces supp_8's 8 genes at its lenient filter - see the
-#   reconciliation note's filter sweep):
+# Method (matches supp_8; the only non-default is prec_moderation="none", which is
+#   required because the default "trended" loess fails on this small 18-sample design;
+#   this setting reproduces the 8 genes of the lenient-filter version, see the
+#   very_lenient row of the filter sweep):
 #     dmDSdata -> dmFilter -> dmPrecision(genewise, moderation="none") ->
 #     dmFit(~family+Diagnosis) -> dmTest(null ~family) -> results(level="gene"/"feature").
-#   NOT common precision, NOT feature-then-gene: this is the stable, gene-level,
+#   Not common precision, not feature-then-gene: this is the stable, gene-level,
 #   FDR-correct within-family DTU readout (distinct from the LOPO classifier's
 #   common-precision feature-level selection).
 #
-# Env: conda R_downstream. Usage: Rscript 260714-DRIMSeq_all_sibling_pairs_LOPOfilter.R
+# Env: conda apa-r. Usage: Rscript 05-260714-DRIMSeq_all_sibling_pairs_LOPOfilter.R
 # =============================================================================
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
@@ -82,7 +82,7 @@ rownames(meta_all) <- meta_all$sample_id
 message("all sibling pairs: ", nrow(meta_all), " samples | ASD=", sum(meta_all$Diagnosis == "ASD"),
         " CTRL=", sum(meta_all$Diagnosis == "CTRL"), " | families=", nlevels(meta_all$family))
 
-# genewise, gene- AND feature-level, at a given filter (supp_8 method)
+# genewise, gene- and feature-level, at a given filter (supp_8 method)
 fit_supp8 <- function(filt) {
   set.seed(SEED)  # reproducibility for dmPrecision's common-precision init (10% subset)
   df <- data.frame(gene_id = gene_id, feature_id = feature_id, counts_mat, check.names = FALSE)
@@ -120,7 +120,7 @@ for (nm in names(FILTERS)) {
                            gene_tested = nrow(g),
                            gene_sig05 = sum(g$adj_pvalue < 0.05, na.rm = TRUE),
                            gene_sig10 = sum(g$adj_pvalue < 0.10, na.rm = TRUE))
-  # HEADLINE: the LOPO-filter run = the supp_8 re-run at the tighter filter
+  # Main result: the LOPO-filter run (supp_8 method at the tighter filter)
   if (nm == "LOPO_tight") {
     write.csv(g, file.path(OUTDIR, "drimseq_allpairs_genelevel_LOPOfilter.csv"), row.names = FALSE)
     write.csv(r$feat[, c("gene_id", "symbol", "feature_id", "lr", "df", "pvalue", "adj_pvalue")],

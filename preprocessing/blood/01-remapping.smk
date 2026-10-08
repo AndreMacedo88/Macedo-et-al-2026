@@ -266,7 +266,7 @@ rule utr_mapping_raw:
         anno=config["anno_csv"],
     threads: 26
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling run {params.gtf} -a {input.bams} -f three_prime_utr -s utr -p smartseq -v 3 -m union -r -A {params.anno} -L True -i -o {output}
@@ -288,7 +288,7 @@ rule utr_mapping_raw:
 #         anno=config["anno_csv"],
 #     threads: 26
 #     conda:
-#         "utrcalling"
+#         "apa-utrcalling"
 #     shell:
 #         """
 #         utrcalling call-peaks {params.utr_regions} -c {input.counts} -s utr -p smartseq -v 3 -m union -r -A {params.anno} -L True -i -o {output}
@@ -306,7 +306,7 @@ rule utr_mapping_raw:
 #         anno=config["anno_csv"],
 #     threads: 26
 #     conda:
-#         "utrcalling"
+#         "apa-utrcalling"
 #     shell:
 #         """
 #         utrcalling call-peaks {params.utr_regions} -c {input.counts} -s utr -p smartseq -v 3 -m union -r -A {params.anno} -L True -i -o {output}
@@ -319,7 +319,7 @@ rule calculate_mean_utr_sizes:
     output:
         "{dir_results}{results_base_name}_means.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling compute-mean-utr-sizes {input} {output} -u utr_name
@@ -334,7 +334,7 @@ rule call_peaks:
     params:
         out="{dir_results}{results_base_name}",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling call-peaks-different-bandwidths {input} {params.out} -b 12
@@ -347,7 +347,7 @@ rule trim_peaks:
     output:
         "{dir_results}{results_base_name}_bw12_above10cts.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling remove-peaks-below-threshold {input} {output} -t 0.05 -m 10
@@ -360,7 +360,7 @@ rule remove_non_apa_utrs:
     output:
         "{dir_results}{results_base_name}_bw12_above10cts_apa.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling select-alternative-transcription-events {input} {output}
@@ -373,7 +373,7 @@ rule rename_peaks_to_gene_name:
     output:
         "{dir_results}{results_base_name}_bw12_above10cts_apa_named.h5ad",
     conda:
-        "utrcalling"
+        "apa-utrcalling"
     shell:
         """
         utrcalling generate-names {input} {output} -u utr_name -g gene_name

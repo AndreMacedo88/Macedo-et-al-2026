@@ -16,22 +16,22 @@ Supports
 Inputs
     $M26_DATA_ROOT/3utr/Blood/2025_analyses/within_family_systematic/per_pair_global_dpsi.csv
     (columns fam, proband, sib, p_age, s_age, samesex, global_dpsi; written by
-    260615-within_family_systematic_apa.ipynb)
+    07-260615-within_family_systematic_apa.ipynb)
 
 Outputs
     <outdir>/global_dpsi_summary_stats.csv  (one row per statistic: statistic, value, note)
     Default outdir = the input directory (2025_analyses/within_family_systematic/).
     An existing output file is never overwritten unless --overwrite is given.
 
-How to run (conda env downstr)
-    conda run -n downstr python 261007-within_family_global_dpsi_stats.py
-    conda run -n downstr python 261007-within_family_global_dpsi_stats.py --outdir /some/scratch/dir
+How to run (conda env apa-python)
+    conda run -n apa-python python 08-261007-within_family_global_dpsi_stats.py
+    conda run -n apa-python python 08-261007-within_family_global_dpsi_stats.py --outdir /some/scratch/dir
 
 Provenance
     Reconstructed on 2026-10-07 to reproduce the within-family global-Delta-psi text
     statistics (new file global_dpsi_summary_stats.csv); original generating code was
     not archived. The Wilcoxon and sign tests mirror the calls in
-    260615-within_family_systematic_apa.ipynb (scipy.stats.wilcoxon default,
+    07-260615-within_family_systematic_apa.ipynb (scipy.stats.wilcoxon default,
     scipy.stats.binomtest); the age-gap Spearman is computed on the signed gap
     p_age - s_age.
 """

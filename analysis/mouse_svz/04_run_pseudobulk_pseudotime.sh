@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Driver for 260526-drimseq_pseudotime_pseudobulk.R.
+# Driver for 04_260526-drimseq_pseudotime_pseudobulk.R.
 # Mouse SVZ. Single lineage (no per-lineage loop, no controls filter).
 #
 # Outputs:
@@ -15,9 +15,9 @@
 #     run.log
 #
 # Usage:
-#   bash run_pseudobulk_pseudotime.sh
+#   bash 04_run_pseudobulk_pseudotime.sh
 # or with overrides:
-#   N_BINS=4 NCORES=8 bash run_pseudobulk_pseudotime.sh
+#   N_BINS=4 NCORES=8 bash 04_run_pseudobulk_pseudotime.sh
 # =============================================================================
 
 set -euo pipefail

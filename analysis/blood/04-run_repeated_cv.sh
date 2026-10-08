@@ -2,7 +2,7 @@
 # Launch N stratified-10-fold partitions in parallel (each an independent process with
 # CV_WORKERS BiocParallel workers), then aggregate into the final pooled result + plots.
 # Idempotent: a partition whose rds already exists is skipped (resumable).
-#   usage: run_repeated_cv.sh [N_REPEATS=20] [PAR=8]   (env CV_WORKERS default 4)
+#   usage: 04-run_repeated_cv.sh [N_REPEATS=20] [PAR=8]   (env CV_WORKERS default 4)
 set -uo pipefail
 : "${M26_DATA_ROOT:?Set M26_DATA_ROOT to the data directory (see README)}"
 HERE="$(cd "$(dirname "$0")" && pwd)"

@@ -3,7 +3,7 @@
 # =============================================================================
 # DRIMSeq pseudotime LRT on (sample x pseudotime-bin) pseudobulk.
 # Mouse SVZ.  Logic-identical to the Knoblich version in
-# organoids_knoblich/UTR/260526-drimseq_pseudotime_pseudobulk.R; the only
+# analysis/organoids/pseudotime/06_260526-drimseq_pseudotime_pseudobulk.R; the only
 # dataset-specific differences are set via the shell driver's CLI args:
 #   --lineage all                     (mouse has a single trajectory)
 #   --pseudotime_col dpt_pseudotime   (no lineage suffix)
@@ -18,8 +18,8 @@
 # Mouse `batch_number` is 1-to-1 with `sample_id` (6 levels, one per
 # wildtype mouse batch). Same role as Knoblich `batch_number` and as
 # Li et al. 2023's `library`. The coarser `super_batch` concept is Knoblich-
-# only and is not used in either script (see Section 11 of the companion
-# methods doc for the rationale).
+# only and is not used in either script (see the notes on super_batch in
+# Sections 0 and 1 below).
 #
 # pt_bin is a 3-level factor obtained by quantile-binning the
 # lineage-restricted `dpt_pseudotime` (cells with NA in this column are
@@ -29,21 +29,22 @@
 # 6 samples x 3 bins = 18 units, n_eff = 18. Bins below MIN_CELLS_PER_UNIT
 # (default 30) are dropped (verified: all 18 mouse units have >= 46 cells).
 #
-# Why pseudobulk for pseudotime (mouse parity with the Knoblich case):
+# Why pseudobulk for pseudotime (mouse parity with the organoid analysis):
 #   The cell-level LRT in 260401-...R assumes per-cell exchangeability under
-#   H0. For mouse the bootstrap concordance is high (~91.6%, see Figure 1
-#   defensibility statement) so the chi-sq approximation is mostly fine -
-#   but the pseudobulk run is a cheap orthogonal sanity check that the
-#   headline LRT survives a sample-level pseudoreplication-immune test.
+#   H0. For mouse the concordance with the parametric bootstrap is high
+#   (~91.6%), so the chi-sq approximation is mostly fine,
+#   but the pseudobulk run is a cheap independent sanity check that the
+#   main LRT results hold in a sample-level test that is not affected by
+#   pseudoreplication.
 #   Each (sample x pt_bin) is one independent observation; n_eff = n_units
 #   = 18.
 #
 # Why 3 bins (and not 8 like the Knoblich treatment script):
-#   3 bins is the smallest design that captures monotonic AND U-shaped /
+#   3 bins is the smallest design that captures monotonic and U-shaped /
 #   inverted-U-shaped pseudotime patterns (2 df via factor coding). With 6
 #   mouse batches this gives 18 units; pushing to 4 bins keeps all units
-#   above the 30-cell floor but adds little resolution. See planning
-#   evaluation (Explore agent report).
+#   above the 30-cell floor but adds little
+#   resolution.
 #
 # Why factor(pt_bin) (and not bs(pt_mid, df=2)):
 #   Same df, same flexibility, simpler interpretation. The factor reports
@@ -55,19 +56,19 @@
 # non-finite gene-wise precision; those genes have their precision overwritten
 # with the common precision. Same as the treatment-arm script.
 #
-# Reproducibility (mandatory):
+# Reproducibility:
 #   - set.seed(opts$seed) called immediately before each dmPrecision call
 #     (dmPrecision uses add_uniform=TRUE which jitters zero-count features).
 #   - master_seed recorded in the output CSV + run_metadata.json sidecar.
-#   - prec_subset = 1 (force deterministic precision estimation; see
-#     CLAUDE.md pitfall "dmPrecision is non-deterministic").
+#   - prec_subset = 1 (forces deterministic precision estimation;
+#     dmPrecision is non-deterministic by default).
 #
-# Companion methods document:
-#   260526-pseudobulk_pseudotime_methods.md
+# Driver script:
+#   04_run_pseudobulk_pseudotime.sh
 #
-# Usage (one invocation; the mouse driver does NOT loop over lineages):
+# Usage (one invocation; the mouse driver does not loop over lineages):
 #
-#   Rscript 260526-drimseq_pseudotime_pseudobulk.R \
+#   Rscript 04_260526-drimseq_pseudotime_pseudobulk.R \
 #       --input  /path/to/UTR_count_table_*.h5ad \
 #       --lineage all \
 #       --pseudotime_col dpt_pseudotime \
@@ -76,7 +77,7 @@
 #       --n_bins 3 --min_cells_per_unit 30 --ncores 16
 #
 # Test mode:
-#   Rscript 260526-drimseq_pseudotime_pseudobulk.R --test
+#   Rscript 04_260526-drimseq_pseudotime_pseudobulk.R --test
 # =============================================================================
 
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
@@ -89,7 +90,7 @@ suppressPackageStartupMessages({
     library(jsonlite)  # run_metadata.json sidecar
 })
 
-reticulate::use_condaenv("R_downstream", required = TRUE)
+reticulate::use_condaenv("apa-r", required = TRUE)
 box::use(
     DRIMSeq[dmDSdata, dmFilter, dmPrecision, dmFit, dmTest, results,
             samples, counts, common_precision],
@@ -111,13 +112,13 @@ parse_args <- function(argv) {
         # Default: batch_number (= sample_id = "library" in Li et al. 2023 Nature,
         # which uses `library` as the per-sample covariate in their DE model:
         # Y ~ n_UMI + library + cell_type + condition).
-        # The coarser super_batch (3 levels; sequencing run) is NOT recommended
+        # The coarser super_batch (3 levels; sequencing run) is not recommended
         # for the controls-only pseudotime test: in controls super_batch has
         # only 2 levels and the `213` level contains a single sample (213664),
         # so super_batch fails to control for between-sample biological
-        # variation among the 7 samples in super_batch 206. See
-        # 260526-pseudobulk_pseudotime_methods.md Section 6 for the full
-        # argument.
+        # variation among the 7 samples in super_batch 206
+        # (super_batch exists only for the organoids; mouse uses batch_number,
+        # which equals sample_id).
         covariate_col = "batch_number",
         output_dir = NULL,
         n_bins = 3L,                     # 3 bins (vs 8 in the treatment script)
@@ -156,7 +157,7 @@ parse_args <- function(argv) {
     }
     # Default pseudotime_col: derive from --lineage if not explicitly set.
     # Special case: --lineage all (mouse single-trajectory convention)
-    # falls back to the bare "dpt_pseudotime" column, NOT "dpt_pseudotime_all"
+    # falls back to the bare "dpt_pseudotime" column, not "dpt_pseudotime_all"
     # (which does not exist in either dataset).
     if (is.null(defaults$pseudotime_col)) {
         if (defaults$lineage %in% c("all", "")) {
@@ -189,10 +190,10 @@ pseudobulk_by_group <- function(X_cells_by_features, groups) {
 # a `derive_super_batch <- function(sample_id_vec) substr(sample_id_vec, 1, 3)`
 # helper because there `induced` is collinear with sample, forcing the coarser
 # `super_batch` (sequencing run) as the only viable covariate. The pseudotime
-# fork (this file) intentionally does NOT need that helper -- the covariate is
+# fork (this file) does not need that helper: the covariate is
 # `batch_number` (= sample_id = Li et al. 2023 "library"), and `super_batch`
-# would be a degenerate covariate in the controls-only subset (see
-# 260526-pseudobulk_pseudotime_methods.md Section 11). If we ever fork this
+# would be a degenerate covariate in the controls-only subset (2 levels,
+# one of them a single sample; see Section 0). If we ever fork this
 # script back into a treatment-arm variant, re-introduce the helper there.
 
 to_dgCMatrix_double <- function(X) {
@@ -267,7 +268,7 @@ quantile_bin_pseudotime <- function(pt, n_bins) {
 # LRT df per (K-1) compositional dimension = n_bins - 1. With n_bins = 3 this
 # gives a 2-df test that can detect any 3-bin pattern (monotonic, U, inverted-U).
 # `spline_df` is unused (kept for API parity with the treatment script).
-# `covariate_col` is REQUIRED (no default). Callers must pass it explicitly;
+# `covariate_col` is required (no default). Callers must pass it explicitly;
 # this prevents silent fallback to a stale default when the script is invoked
 # from a shell driver that intends a different covariate. The Knoblich and
 # mouse drivers both pass --covariate_col batch_number; the test suite (Tests
@@ -430,8 +431,8 @@ run_drimseq_pipeline <- function(d, design_full, design_null,
                                  seed = 42L, verbose = TRUE) {
     if (verbose) message("  dmPrecision (genewise, prec_subset=1, seed=", seed, ")...")
     used_genewise <- TRUE
-    # Pin prec_subset = 1 for deterministic precision estimation (CLAUDE.md
-    # pitfall: dmPrecision is non-deterministic by default; common_precision
+    # Pin prec_subset = 1 for deterministic precision estimation
+    # (dmPrecision is non-deterministic by default; common_precision
     # varied 95-984 in repeated runs of the same data). Seed before each call
     # because add_uniform=TRUE adds tiny jitter to zero-count features.
     set.seed(seed)
@@ -526,19 +527,20 @@ run_drimseq_pipeline <- function(d, design_full, design_null,
 }
 
 # =============================================================================
-# Section 3: Cluster bootstrap REMOVED in pseudotime fork.
+# Section 3: Cluster bootstrap removed in pseudotime fork.
 # =============================================================================
 # The treatment-arm script keeps a cluster_bootstrap function as a directional
 # sensitivity analysis for the induced contrast (where the effective n_samples
 # is 22 -- borderline for cluster bootstrap reliability).
 #
-# The pseudotime test does NOT need it: there is no binary contrast, the n_eff
-# is the number of pseudobulk units (24 per lineage), and the LRT is testing
+# The pseudotime test does not need it: there is no binary contrast, the n_eff
+# is the number of pseudobulk units (24 per organoid lineage, 18 for mouse),
+# and the LRT is testing
 # a multi-level factor whose stability under sample bootstrap would just
-# repeat what the permutation script already establishes. If a reviewer asks
-# for a bootstrap sensitivity, the right answer is "see the permutation
-# script (260526-permutation_optimized_2.R) which is the more powerful
-# orthogonal check."
+# repeat what the permutation script already establishes. For a bootstrap-type
+# sensitivity analysis, see the permutation
+# script (03_260526-permutation_optimized_2.R), which is the more powerful
+# independent check.
 # =============================================================================
 # (Legacy cluster-bootstrap implementation removed in the pseudotime fork.
 # Refer to drimseq_treatment_main_pseudobulk.R for the original code.)
@@ -739,7 +741,7 @@ run_tests <- function() {
 }
 
 # =============================================================================
-# MAIN
+# Main
 # =============================================================================
 
 opts <- parse_args(commandArgs(trailingOnly = TRUE))
@@ -781,7 +783,7 @@ pt_all <- as.numeric(obs_all[[opts$pseudotime_col]])
 sample_id_all <- as.character(obs_all$sample_id)
 # Covariate source: must be a column already present in obs. (The legacy
 # substr-of-sample_id "super_batch" derivation from the treatment-arm parent
-# script was removed; this script's covariate is batch_number, period.)
+# script was removed; this script's covariate is batch_number.)
 if (!(opts$covariate_col %in% colnames(obs_all))) {
     stop("Covariate column '", opts$covariate_col,
          "' not found in obs; available columns: ",
@@ -849,14 +851,14 @@ pb_meta <- pb_meta[keep_units, , drop = FALSE]
 
 manifest_path <- file.path(opts$output_dir, "pseudobulk_units.csv")
 write.csv(as.data.frame(pb_meta), manifest_path, row.names = FALSE)
-# Diagnostic and DRIMSeq-input column selection must use the ACTUAL covariate
-# column requested via --covariate_col (default batch_number), NOT a hardcoded
+# Diagnostic and DRIMSeq-input column selection must use the actual covariate
+# column requested via --covariate_col (default batch_number), not a hardcoded
 # "super_batch". The latter was inherited from the treatment-arm pseudobulk
 # script where super_batch is the only viable covariate (the `induced`
 # contrast is collinear with sample). In the pseudotime fork it is wrong
 # whenever --covariate_col != "super_batch" (i.e. essentially always for
 # Knoblich controls and always for mouse), because pb_meta only carries the
-# requested covariate column. The stopifnot below is a load-bearing check
+# requested covariate column. The stopifnot below checks
 # that the covariate is actually in pb_meta -- if this trips, the upstream
 # left_join from sample_lookup is broken.
 stopifnot(opts$covariate_col %in% colnames(pb_meta))
@@ -983,7 +985,7 @@ summary_path <- file.path(opts$output_dir, sprintf("drimseq_summary_%s.csv", slu
 write.csv(as.data.frame(summary_row), summary_path, row.names = FALSE)
 cat("\n[Summary]", summary_path, "\n"); print(as.data.frame(summary_row))
 
-# ---- Sidecar: run_metadata.json (audit trail reviewers expect) ----
+# ---- Sidecar: run_metadata.json (audit trail) ----
 metadata <- list(
     script = "260526-drimseq_pseudotime_pseudobulk.R",
     script_version_hash = tryCatch(

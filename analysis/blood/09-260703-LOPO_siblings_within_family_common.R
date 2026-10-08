@@ -1,27 +1,27 @@
 #!/usr/bin/env -S Rscript --vanilla
 # =============================================================================
-# In-house within-family LOPO ASD classifier (Fig 5 S5i) - COMMON precision
+# In-house within-family LOPO ASD classifier (Fig. 4F, 4G) - common precision
 # -----------------------------------------------------------------------------
-# Generates the leave-one-PAIR-out result that Fig5/supp_9_lopo_within_family.ipynb
+# Generates the leave-one-pair-out result that figures/fig4/supp_9_lopo_within_family.ipynb
 # plots.
 #
 # Cohort: 9 in-house ASD-proband / unaffected-sibling pairs (18 samples) sequenced
-# in the SAME batch (smartseq v3), from the excluded sibling batches (2nd/3rd_siblings_seq)
-# - independent of the discovery cohort, and batch/age/genetics/household matched WITHIN pair.
+# in the same batch (smartseq v3), from the excluded sibling batches (2nd/3rd_siblings_seq)
+# - independent of the discovery cohort, and batch/age/genetics/household matched within pair.
 # The pairing/diagnosis is the explicit samplesheet (samplesheet_inhouse_9pairs.csv), which
 # cross-checks 1:1 against the h5ad obs (family, Diagnosis) and per_pair_global_dpsi.csv.
 #
-# Method (matches S5i / the audited reusable pipeline; COMMON precision only, since genewise
+# Method (as plotted in supp_9; common precision only, since genewise
 # is numerically fragile here - 2/9 folds hit non-finite optimisation):
-#   each fold leaves out ONE pair (both members); paired DRIMSeq DTU
-#   (~ family + Diagnosis vs null ~ family, COMMON precision) on the remaining 8 pairs,
+#   each fold leaves out one pair (both members); paired DRIMSeq DTU
+#   (~ family + Diagnosis vs null ~ family, common precision) on the remaining 8 pairs,
 #   take the top-50 features by p-value (no leakage), fit ridge cv.glmnet on those features'
 #   isoform proportions, predict the held-out pair's 2 samples. Family absorbs age/sex/
 #   genetic background/household, so the contrast is the within-pair ASD effect.
-#   Report POOLED out-of-fold ROC AUC + the within-pair proband>sibling ordering (k/9).
+#   Report pooled out-of-fold ROC AUC + the within-pair proband>sibling ordering (k/9).
 #
-# Env: conda R_downstream. Usage:
-#   Rscript 260703-LOPO_siblings_within_family_common.R
+# Env: conda apa-r. Usage:
+#   Rscript 09-260703-LOPO_siblings_within_family_common.R
 #   (optional flags: --topk 50 --seed 123 --cores 4 --outdir <dir>)
 # =============================================================================
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
@@ -155,10 +155,10 @@ message(
   sum(meta_all$Diagnosis == "CTRL")
 )
 
-# -------- paired DRIMSeq feature selection, COMMON precision --------
+# -------- paired DRIMSeq feature selection, common precision --------
 run_drimseq_paired <- function(cmat, meta) {
-  set.seed(SEED) # reproducibility ONLY: fixes DRIMSeq's random 10%-gene common-precision
-  # subset (see 260710b). No model/logic/leakage change; default MulticoreParam kept.
+  set.seed(SEED) # reproducibility only: fixes DRIMSeq's random 10%-gene common-precision
+  # subset (see 11-260710b). No model/logic/leakage change; default MulticoreParam kept.
   meta <- droplevels(meta)
   df <- data.frame(
     gene_id = gene_id,
@@ -176,9 +176,9 @@ run_drimseq_paired <- function(cmat, meta) {
   )
   design_full <- model.matrix(~ family + Diagnosis, data = samples(d))
   design_null <- model.matrix(~family, data = samples(d))
-  # COMMON precision: trivial genewise grid (min length 3, discarded) then overwrite the
+  # Common precision: trivial genewise grid (min length 3, discarded) then overwrite the
   # genewise vector with the single common estimate -> fast + robust on the tiny paired design.
-  # prec_moderation="none" is REQUIRED here: the default "trended" moderation runs a loess over
+  # prec_moderation="none" is required here: the default "trended" moderation runs a loess over
   # the genewise estimates that crashes ("invalid 'x'") on this tiny 9-pair design; we discard the
   # genewise values anyway (overwritten with the common estimate below), so no moderation is needed.
   d <- dmPrecision(
@@ -197,7 +197,7 @@ run_drimseq_paired <- function(cmat, meta) {
   res[order(res$pvalue), ]
 }
 
-# -------- LOPO loop (leave one PAIR out) --------
+# -------- LOPO loop (leave one pair out) --------
 pred_rows <- list()
 feat_rows <- list()
 results_list <- list()
@@ -227,7 +227,7 @@ for (fam in families) {
   storage.mode(X_train) <- "double"
   X_test <- t(props_mat[top_feats, test_ids, drop = FALSE])
   storage.mode(X_test) <- "double"
-  set.seed(SEED) # reproducibility ONLY: fixes cv.glmnet internal-CV fold assignment
+  set.seed(SEED) # reproducibility only: fixes cv.glmnet internal-CV fold assignment
   fit <- cv.glmnet(
     X_train,
     meta_train$Diagnosis,
@@ -282,7 +282,7 @@ stab <- merge(
 )
 stab <- stab[order(-stab$prop_folds_selected), ]
 
-# full-data DRIMSeq for interpretation (NOT used in the folds -> no leakage into the metric)
+# full-data DRIMSeq for interpretation (not used in the folds -> no leakage into the metric)
 message("Full-data DRIMSeq (consensus features, interpretation-only) ...")
 full_res <- tryCatch(
   run_drimseq_paired(counts_mat[, meta_all$sample_id, drop = FALSE], meta_all),

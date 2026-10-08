@@ -11,25 +11,25 @@ Purpose
 Supports
     Fig. 2H (convergent / lineage-specific perturbation pathways) and fig. S3H.
 
-Recovered from the scratch script task_convdiv_mouseint.R (PART A) of Claude session
-    e9efcb05 (notebooks project, 2026-07-24), which wrote treatment_convdiv.csv, byte-identical
-    to dirmult_treatment_results/convergence_divergence_ora.csv; ported from R to Python on
-    2026-10-07 (original generating code was not archived in the project). The port keeps the
-    original merge semantics (dplyr::full_join on ID: EXC rows in EXC order, then INH-only-tested
+Provenance
+    Ported on 2026-10-07 from an earlier R script that wrote
+    dirmult_treatment_results/convergence_divergence_ora.csv. The port keeps the R merge
+    semantics (dplyr::full_join on ID: EXC rows in EXC order, then INH-only-tested
     terms in INH order; Description taken from the EXC table only, so it is NA for terms tested
     only in INH) and R write.csv formatting (quoted strings, 15 significant digits, NA).
 
 Inputs (KB = $M26_DATA_ROOT/3utr/organoids/knoblich/utrcalling/dirmult_treatment_results)
     KB/<lin>/enrichment_<tier>/ora_{Reactome,GO_BP,Hallmark,KEGG}.csv   (lin = excitatory,
-    inhibitory; written by 260515-enrichment_robust.ipynb / 260515-enrichment_discovery.ipynb)
+    inhibitory; written by 07_260515-enrichment_discovery.ipynb for the discovery tier, which
+    the figures use; the robust tier is the same analysis on the bootstrap-robust subset)
 
 Outputs (default directory KB)
     --tier robust    -> convergence_divergence_ora.csv
-    --tier discovery -> convergence_divergence_ora_discovery.csv
+    --tier discovery -> convergence_divergence_ora_discovery.csv   (default; used for the figures)
     columns: ID, Description, padj_exc, k_exc, padj_inh, k_inh, collection, class
 
-Run (conda env downstr)
-    conda run -n downstr python 261007-convergence_divergence_ora.py [--tier robust|discovery]
+Run (conda env apa-python)
+    conda run -n apa-python python 08_261007-convergence_divergence_ora.py [--tier discovery|robust]
         [--outdir DIR]
 
 Verification (2026-10-07): --tier robust output is byte-identical to the archived

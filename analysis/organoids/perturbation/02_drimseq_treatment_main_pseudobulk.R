@@ -2,12 +2,12 @@
 
 # =============================================================================
 # DRIMSeq treatment-effect LRT on (sample x pseudotime-bin) pseudobulk.
-# PRIMARY SCREEN: MAIN EFFECT ONLY (no induced:pseudotime interaction term).
+# Primary screen: main effect only (no induced:pseudotime interaction term).
 #
-# Companion script:
-#   drimseq_treatment_interaction_pseudobulk.R  -- secondary screen with the
-#   interaction term included; use when you want to discover hits whose
-#   treatment effect varies along pseudotime but averages out.
+# One lineage per invocation. The runner (01_run_treatment_main.sh) loops over
+# the inhibitory and excitatory lineages and sets --require_targeting_guide
+# TRUE, so the induced arm contains only cells with a targeting guide;
+# uninduced cells are kept regardless of guide.
 #
 # Knoblich brain-organoid 3'UTR pipeline, treatment arm.
 #
@@ -17,30 +17,30 @@
 #   null      ~ bs(pt, df) + super_batch
 #
 # The induced contrast is tested holding pseudotime fixed (via the spline).
-# This is the same model the previous 3-test version called the "main" test.
-# Why drop the interaction? With n=164 pseudobulk units, the full design that
-# also includes induced:bs(pt) has 14 columns -> 43 free parameters per gene
-# at K=4 (3.8 obs/param, below the 5x rule of thumb). dmFit's BFGS optimiser
-# silently fails to converge for K>=4, dropping ~33% of post-filter genes.
-# Removing the interaction reduces to 9 columns -> 28 free parameters at K=4
-# (5.9 obs/param), and gene-wise precision becomes reliable. See
-# 260511-drimseq_treatment_methods.md Section 7-11 for the full rationale.
+# The induced:bs(pt) interaction is not included. With n=164 pseudobulk
+# units, the full design with the interaction has 14 columns, i.e. 43 free
+# parameters per gene at K=4 (3.8 obs/param, below the 5x rule of thumb).
+# dmFit's BFGS optimiser then silently fails to converge for K>=4, dropping
+# ~33% of post-filter genes. Without the interaction the design has 9
+# columns, i.e. 28 free parameters at K=4 (5.9 obs/param), and gene-wise
+# precision is reliable.
+#
 #
 # Per-gene precision strategy: gene-wise with empirical-Bayes shrinkage as
 # DRIMSeq's default. A small residual fraction (typically K>=7) still gets
 # non-finite gene-wise precision; those genes have their precision overwritten
-# with the common precision. This is a much lighter-touch correction than the
-# force-everything-to-common used in the interaction script.
+# with the common precision, a smaller correction than setting all genes to
+# the common precision.
 #
 # A cluster bootstrap by sample_id is available as a supplementary sensitivity
 # analysis (off by default; n=22 samples is borderline).
 #
-# Companion methods document:
-#   260511-drimseq_treatment_methods.md
+# A sample-level treatment-label permutation null is available with
+# --permute_labels <B> (off by default; Section 3b).
 #
 # Usage (one lineage per invocation; the shell wrapper loops):
 #
-#   Rscript drimseq_treatment_main_pseudobulk.R \
+#   Rscript 02_drimseq_treatment_main_pseudobulk.R \
 #       --input  /path/to/merged_*.h5ad \
 #       --lineage inhibitory \
 #       --output_dir /path/to/results/inhibitory/main_only \
@@ -48,7 +48,7 @@
 #       --bootstrap_b 0 --ncores 16
 #
 # Test mode:
-#   Rscript drimseq_treatment_main_pseudobulk.R --test
+#   Rscript 02_drimseq_treatment_main_pseudobulk.R --test
 # =============================================================================
 
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
@@ -60,7 +60,7 @@ suppressPackageStartupMessages({
     library(splines)
 })
 
-reticulate::use_condaenv("R_downstream", required = TRUE)
+reticulate::use_condaenv("apa-r", required = TRUE)
 box::use(
     DRIMSeq[
         dmDSdata,
@@ -152,7 +152,7 @@ parse_args <- function(argv) {
 }
 
 # =============================================================================
-# Section 1: Helper functions (shared with interaction script -- keep in sync)
+# Section 1: Helper functions
 # =============================================================================
 
 pseudobulk_by_group <- function(X_cells_by_features, groups) {
@@ -169,7 +169,7 @@ derive_super_batch <- function(sample_id_vec) {
     substr(as.character(sample_id_vec), 1L, 3L)
 }
 
-# Permute a label vector WITHIN strata (preserves each stratum's label composition).
+# Permute a label vector within strata (preserves each stratum's label composition).
 # Used by the sample-level treatment-label permutation null: shuffling `induced` across
 # samples within each super_batch keeps the super_batch x induced design structure fixed
 # (super_batch 137, being all-induced, is invariant) while destroying the treatment signal.
@@ -263,7 +263,7 @@ quantile_bin_pseudotime <- function(pt, n_bins) {
     list(bin = bin, bin_mid = bin_mid)
 }
 
-# Simpler than the interaction script: full has only the additive `induced`
+# The full model has only the additive `induced`
 # coefficient (no induced:bs_pt term). LRT df per compositional dimension = 1.
 build_design_matrices <- function(samples_table, spline_df) {
     s <- samples_table
@@ -277,8 +277,8 @@ build_design_matrices <- function(samples_table, spline_df) {
     )
 }
 
-# Delta_psi computation (verbatim from the interaction script -- shared
-# definition of the treatment effect-size signal).
+# Delta_psi computation: definition of the treatment effect size
+# (gene and feature level).
 compute_delta_psi <- function(counts_d, samples_df) {
     pb_cols_raw <- samples_df$sample_id
     if (all(pb_cols_raw %in% colnames(counts_d))) {
@@ -386,13 +386,13 @@ compute_delta_psi <- function(counts_d, samples_df) {
 }
 
 # =============================================================================
-# Section 2: DRIMSeq pipeline wrapper -- single LRT, gene-wise precision with
+# Section 2: DRIMSeq pipeline wrapper: single LRT, gene-wise precision with
 # NaN repair.
 # =============================================================================
 # Precision strategy: leave gene-wise precision as DRIMSeq estimates it, but
 # replace NaN/Inf/<=0 entries (typically K>=7 in this dataset) with the
-# common precision. This is the lighter-touch repair appropriate for the
-# simpler "main only" design, where gene-wise estimates are well-behaved for
+# common precision. This light repair suffices for the main-effect design,
+# where gene-wise estimates are well-behaved for
 # the bulk of the data (verified 2026-05-13 on full inhibitory: 5,291/5,441
 # valid p-values, 76 hits at adj_p<0.01).
 run_drimseq_pipeline <- function(
@@ -677,20 +677,20 @@ cluster_bootstrap <- function(
 # Section 3b: Sample-level treatment-label permutation null
 # =============================================================================
 # Assumption-light calibration of the pseudobulk DRIMSeq LRT for the `induced`
-# contrast, and the proper analogue of the within-sample pseudotime permutation
-# used for Figure 1 / the UTR pseudotime screen. Because `induced` is CONSTANT
-# within sample, the only valid shuffle is at the SAMPLE level; we permute it
-# WITHIN super_batch (stratified) so the super_batch nuisance structure is
+# contrast; the analogue of the within-sample pseudotime permutation used for
+# the pseudotime tests. Because `induced` is constant
+# within sample, the only valid shuffle is at the sample level; we permute it
+# within super_batch (stratified) so the super_batch nuisance structure is
 # preserved (super_batch 137 is all-induced and therefore invariant) and only
 # the treatment signal is destroyed. The post-filter gene set (counts_post) is
 # held fixed; we relabel the samples table and re-run dmPrecision/dmFit/dmTest.
 # Returns genes x B matrices of permutation-null gene-level p-values and LR stats.
 #
 # Note: with ~14 effective samples and the super_batch constraint, the stratified
-# permutation space is small (~hundreds of arrangements), so this CALIBRATES the
+# permutation space is small (~hundreds of arrangements), so this calibrates the
 # chi-squared DRIMSeq p-values (per-gene permutation-p floor 1/(B+1); aggregate
-# hit-count null) rather than replacing them - exactly the role permutation plays
-# for the Figure 1 LRT. See TODO.md.
+# hit-count null) rather than replacing them, as the permutation does for the
+# pseudotime LRT.
 permute_labels_null <- function(
     counts_post,
     pb_samples_drim,
@@ -1072,7 +1072,7 @@ run_tests <- function() {
 }
 
 # =============================================================================
-# MAIN
+# Main
 # =============================================================================
 
 opts <- parse_args(commandArgs(trailingOnly = TRUE))
@@ -1122,8 +1122,8 @@ super_batch_all <- derive_super_batch(sample_id_all)
 keep <- !is.na(pt_all)
 # Optional cleanup: restrict the treatment (induced) arm to confirmed targeting guides,
 # dropping induced cells that carry the non-targeting control guide or no assigned guide.
-# Uninduced cells (the no-perturbation baseline) are kept regardless of guide. OFF by default
-# (preserves the published all-induced behaviour); enable with --require_targeting_guide TRUE.
+# Uninduced cells (the no-perturbation baseline) are kept regardless of guide. Off by default
+# (all induced cells kept); enable with --require_targeting_guide TRUE.
 if (isTRUE(as.logical(opts$require_targeting_guide))) {
     if (!"gRNA" %in% colnames(obs_all)) {
         stop("require_targeting_guide=TRUE needs a 'gRNA' obs column")
@@ -1138,9 +1138,9 @@ if (isTRUE(as.logical(opts$require_targeting_guide))) {
     )
     keep <- keep & !drop_ctrl
 }
-# Optional: restrict to super_batches that carry BOTH induced and uninduced cells
+# Optional: restrict to super_batches that carry both induced and uninduced cells
 # (drops super_batch 137, which is 100% induced). Removes the induced~super_batch
-# confound entirely at the cost of the ~17k induced batch-137 cells. OFF by default.
+# confound entirely at the cost of the ~17k induced batch-137 cells. Off by default.
 if (isTRUE(as.logical(opts$balanced_batches_only))) {
     ind_k <- induced_all %in% c("TRUE", "True", "true", "T", "1")
     both_sb <- names(which(tapply(

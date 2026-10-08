@@ -3,21 +3,21 @@
 # Purpose:
 #   Over-representation analysis (GO BP, Reactome, KEGG, MSigDB Hallmark) of genes whose
 #   3'UTR isoform usage changes along pseudotime, using as foreground the genes that are
-#   significant at BH < 0.05 under BOTH the Dirichlet-multinomial chi-square LRT and the
+#   significant at BH < 0.05 under both the Dirichlet-multinomial chi-square LRT and the
 #   within-sample permutation test. Same settings as the base pipeline
-#   (260411-optimized2_enrichment_analyses.ipynb, chi-square-only ORA), except that the
+#   (08_260411-optimized2_enrichment_analyses.ipynb, chi-square-only ORA), except that the
 #   foreground is the intersection and all terms are kept (pvalueCutoff = 1).
 #
-# Supports: Fig. 1F (GO BP / Reactome terms) and fig. S1H values.
+# Supports: Fig. 1F (GO BP) and fig. S1J (Reactome, KEGG, Hallmark).
 #
 # Inputs:
 #   DirMult_optimized/dirmult_regression_optimized2_joint_df5.csv
 #     (chi-square LRT; BH recomputed over converged, single-gene entries; also the universe)
 #   DirMult_optimized/permutation_batch_number/
 #     dirmult_regression_permutation_optimized2_joint_df5_pt-dpt_pseudotime_cov-batch_number.csv
-#     (permutation test; column padj as written by 260526-permutation_optimized_2.R)
+#     (permutation test; column padj as written by 03_260526-permutation_optimized_2.R)
 #   $M26_DATA_ROOT/common_files/annotations/mouse_to_human_genes.txt (Ensembl orthologs)
-#   org.Mm.eg.db, org.Hs.eg.db, ReactomePA (reactome.db), msigdbr, KEGG REST (online)
+#   org.Mm.eg.db, org.Hs.eg.db, ReactomePA (reactome.db), msigdbr, KEGG rest (online)
 #
 # Outputs (default: DirMult_optimized/ORA/chisq_perm_intersection/):
 #   ora_go_neglog10pval_chisqperm.rds
@@ -26,7 +26,7 @@
 #   ora_hallmark_neglog10pval_chisqperm.rds
 #
 # How to run:
-#   conda run -n R_downstream Rscript 261007-optimized2_ora_chisq_perm_intersection.R [--outdir DIR] [--overwrite]
+#   conda run -n apa-r Rscript 09_261007-optimized2_ora_chisq_perm_intersection.R [--outdir DIR] [--overwrite]
 #
 # Notes:
 #   KEGG is queried online (enrichKEGG), so results depend on the KEGG release at run time

@@ -14,7 +14,7 @@ mycolorscheme <- c(
 )
 
 # ----------------------------------------------------------------------
-# paper_palette_celltypes: cell-type colours matched to THIS project's
+# paper_palette_celltypes: cell-type colours matched to this project's
 # actual obs[["celltype"]] strings, for the 2026 ASD paper figures.
 # Derived from mycolorscheme above, with aNSC split into aNSC1 (original
 # red) + aNSC2 (darker red), and keys renamed to the data's exact strings
@@ -25,7 +25,7 @@ mycolorscheme <- c(
 # neutral non-lineage gray in the panels.
 # ----------------------------------------------------------------------
 paper_palette_celltypes <- c(
-    # neurogenic lineage (coloured in Figure 1 panels A, C, E)
+    # neurogenic lineage (coloured in fig. S1A and Fig. 1C, 1E)
     "qNSC1" = "#9955ff",
     "qNSC2" = "#0047ab",
     "aNSC1" = "#ff1e1d",

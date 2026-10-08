@@ -1,11 +1,11 @@
 #!/bin/bash
 # ============================================================================
-# Run Dirichlet-multinomial (optimized_2) regression on Knoblich CONTROLS ONLY
+# Run Dirichlet-multinomial (optimized_2) regression on Knoblich controls only
 # (induced=False), one per lineage, with batch_number as fixed effect.
 #
-# Uses 260503-dirichlet_multinomial_analysis_optimized_2.R (publication-rigor:
+# Uses 02_260503-dirichlet_multinomial_analysis_optimized_2.R, which includes
 # shared-s, conditional-MLE refits, padded-null safety net, optional
-# parametric bootstrap, real-data null calibration, 16-test verification).
+# parametric bootstrap, real-data null calibration and a 16-test verification.
 #
 # Rationale for the analysis design:
 #   * `induced` is perfectly confounded with `sample`/`batch_number` in the
@@ -13,24 +13,24 @@
 #     induced=False removes the confound, so batch_number becomes a clean
 #     8-level fixed effect.
 #   * Pseudotime was computed without batch correction; including batch_number
-#     in the regression now correctly absorbs technical batch effects.
+#     in the regression absorbs technical batch effects.
 #   * The full inhibitory induced=False pool has 5,130 cells, excitatory
 #     16,153. Both subsampled to a fixed N for tractability and
 #     reproducibility (seed-controlled). cells_used.csv is written into each
-#     run folder for full reproducibility.
+#     run folder.
 #
 # Usage:
-#   bash run_dirmult_all.sh                          # defaults (N=2000)
-#   NCORES=26 SUBSAMPLE_N=2500 bash run_dirmult_all.sh
-#   NCORES=26 BOOTSTRAP=199 bash run_dirmult_all.sh  # enable bootstrap
+#   bash 01_run_dirmult_all.sh                       # defaults (N=6000, B=199)
+#   NCORES=26 SUBSAMPLE_N=2500 bash 01_run_dirmult_all.sh
+#   NCORES=26 BOOTSTRAP=0 bash 01_run_dirmult_all.sh    # disable bootstrap
 #
 # Tunables (env vars):
-#   NCORES          cores for parallel per-gene fitting     (default 16)
-#   SUBSAMPLE_N     cells kept per lineage after filters    (default 2000)
+#   NCORES          cores for parallel per-gene fitting     (default 26)
+#   SUBSAMPLE_N     cells kept per lineage after filters    (default 6000)
 #   SEED            RNG seed for the subsample              (default 42)
 #   SPLINE_DF       df for bs() spline of pseudotime        (default 5)
 #   MIN_CELLS       skip UTRs with fewer than this many     (default 50)
-#   BOOTSTRAP       N bootstrap reps; 0 = off               (default 0)
+#   BOOTSTRAP       N bootstrap reps; 0 = off               (default 199)
 #   BOOTSTRAP_PVAL  bootstrap genes with p_chisq < this     (default 0.1)
 #   CALIBRATION_N   real-data null calibration sample       (default 200)
 #   INPUT           path to the raw-UTR + pseudotime h5ad
@@ -50,12 +50,12 @@
 # Empirical: 200 genes / N=1000 cells / 4 cores = 7 min wallclock.
 # Per-gene scales as roughly N^1.72.
 # Full data = 14,755 UTRs.
-#   N=1500 cells, 26 cores -> ~3h per lineage, ~6h  total ✓ short overnight
-#   N=2000 cells, 26 cores -> ~4.5h/lineage, ~9h   total ✓ overnight (default)
-#   N=2500 cells, 26 cores -> ~6.5h/lineage, ~13h  total (long overnight)
-#   N=3000 cells, 26 cores -> ~9h /lineage,  ~18h  total (>1 night)
+#   N=1500 cells, 26 cores -> ~3h per lineage, ~6h  total
+#   N=2000 cells, 26 cores -> ~4.5h/lineage, ~9h   total
+#   N=2500 cells, 26 cores -> ~6.5h/lineage, ~13h  total
+#   N=3000 cells, 26 cores -> ~9h /lineage,  ~18h  total
 # Phase D (real-data null calibration, default n=200) adds ~30s on the same
-# core count. Bootstrap (off by default) is the biggest opt-in cost: with
+# core count. Bootstrap (on by default) is the largest additional cost: with
 # B=199 on ~5-10% borderline genes, expect a 30-60% wallclock increase.
 # ============================================================================
 

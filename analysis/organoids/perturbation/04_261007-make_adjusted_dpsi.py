@@ -6,18 +6,17 @@ Purpose
     design  W_u ~ bs(pt_u, df=5) + super_batch + induced  (weights = n_cells), i.e. the
     treatment effect on 3'UTR length holding pseudotime and super_batch fixed. Also
     recomputes the unadjusted (cell-count-weighted marginal) Delta-psi on the same units.
-    Method note: paper_2026_ASD/Fig3/adjusted_delta_psi_methods.md.
 
 Supports
-    Fig. 2F (treatment volcano, x-axis = delta_psi_treatment_adjusted; formerly Fig. 3a).
+    Fig. 2F (treatment volcano, x-axis = delta_psi_treatment_adjusted).
 
-Reconstructed on 2026-10-07 to reproduce
-    dirmult_treatment_results/<lin>/main_only/delta_psi_treatment_adjusted_<lin>.csv;
-    original generating code (make_adjusted_dpsi.py) was not archived.
+Provenance
+    Rewritten on 2026-10-07; reproduces the stored
+    dirmult_treatment_results/<lin>/main_only/delta_psi_treatment_adjusted_<lin>.csv.
 
-Definitions (all reproduced from the archived outputs)
-    Units: the pseudobulk units of the canonical DRIMSeq run
-        (drimseq_treatment_main_pseudobulk.R --require_targeting_guide TRUE): cells with
+Definitions
+    Units: the pseudobulk units of the main DRIMSeq run
+        (02_drimseq_treatment_main_pseudobulk.R --require_targeting_guide TRUE): cells with
         non-NA dpt_pseudotime_<lin>; induced cells whose gRNA is 'Control2' or NA removed;
         pseudotime quantile-binned into 8 bins over the retained cells (R quantile type 7,
         cut(include.lowest=TRUE)); unit = sample_id x bin; units with >= 10 cells kept;
@@ -31,13 +30,13 @@ Definitions (all reproduced from the archived outputs)
     Raw Delta-psi: n_cells-weighted mean W (induced) - n_cells-weighted mean W (uninduced).
     Adjusted Delta-psi: WLS via numpy lstsq on sqrt(n_cells)-scaled patsy design
         'bs(pt_mid, df=5) + C(super_batch) + induced' (spline knots from all units of the
-        lineage, all super_batch levels kept even if absent for a gene -> pinv covariance);
+        lineage, all super_batch levels kept even if absent for a gene, hence pinv covariance);
         sigma2 = resid'resid / (n_units - n_columns); SE from pinv(A'A); two-sided t-test p
         (adj_wls_p); BH across genes with scipy.stats.false_discovery_control
         (adj_wls_padj). Output sorted by gene_id (gene symbol).
 
-Inputs
-    $M26_DATA_ROOT/3utr/organoids/knoblich/utrcalling/
+Inputs (KB = $M26_DATA_ROOT/3utr/organoids/knoblich/utrcalling)
+    KB/
         merged_bw12_above10cts_apa_named_annotated_fix_pt.h5ad
         dirmult_treatment_results/<lin>/main_only/pseudobulk_units.csv  (consistency check only)
 
@@ -45,13 +44,13 @@ Outputs (default: KB/dirmult_treatment_results/<lin>/main_only/)
     delta_psi_treatment_adjusted_<lin>.csv with columns gene_id,
     delta_psi_treatment_adjusted, delta_psi_treatment_raw_recomputed, adj_wls_p, adj_wls_padj
 
-Run (conda env downstr; < 1 min, ~3 GB RAM)
-    conda run -n downstr python 261007-make_adjusted_dpsi.py [--outdir DIR]
+Run (conda env apa-python; < 1 min, ~3 GB RAM)
+    conda run -n apa-python python 04_261007-make_adjusted_dpsi.py [--outdir DIR]
         [--lineages inhibitory excitatory]
     With --outdir, files are written to DIR/<lin>/.
 
 Verification (2026-10-07): units identical to pseudobulk_units.csv; output CSVs are
-    byte-identical to the archived files for both lineages (numpy/scipy/patsy in env downstr).
+    byte-identical to the archived files for both lineages (numpy/scipy/patsy in env apa-python).
 """
 
 import argparse
@@ -86,7 +85,7 @@ def quantile_bin(pt: np.ndarray, n_bins: int) -> np.ndarray:
 
 
 def build_units(adata: ad.AnnData, lin: str) -> tuple[pd.DataFrame, np.ndarray]:
-    """Pseudobulk (sample x pseudotime-bin) units as in drimseq_treatment_main_pseudobulk.R."""
+    """Pseudobulk (sample x pseudotime-bin) units as in 02_drimseq_treatment_main_pseudobulk.R."""
     obs = adata.obs
     pt = obs[f"dpt_pseudotime_{lin}"].to_numpy(dtype=float)
     induced = obs["induced"].astype(str).isin(["True", "TRUE", "true", "1"]).to_numpy()

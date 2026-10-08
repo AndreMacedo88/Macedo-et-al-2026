@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Delta Psi (Δψ) — Rank-Weighted Proportion Shift for 3'UTR Isoform Usage.
+Delta Psi (Δψ): Rank-Weighted Proportion Shift for 3'UTR Isoform Usage.
 
 Adapts the PSI (Percent Spliced In) framework to APA: for each gene with K UTR
 sites ordered by utr_size, assigns normalized ranks r_k = (k-1)/(K-1), fits
@@ -9,13 +9,13 @@ softmax), and computes a signed scalar in [-1, 1] summarizing the direction
 and magnitude of UTR length change along pseudotime.
 
 Effect size metrics per gene:
-  - delta_psi:     W(t_late) - W(t_early)  — overall endpoint change
-  - delta_psi_max: max(W) - min(W)         — max trajectory range
-  - nmi:           1 - |delta_psi|/|delta_psi_max| — non-monotonicity index in [0, 1]
+  - delta_psi:     W(t_late) - W(t_early) (overall endpoint change)
+  - delta_psi_max: max(W) - min(W) (max trajectory range)
+  - nmi:           1 - |delta_psi|/|delta_psi_max| (non-monotonicity index in [0, 1])
   - t_at_max/min:  where W(t) peaks/troughs along pseudotime
 
 Usage:
-  python 260309-calculate_delta_psi.py <input.h5ad> [options]
+  python 08_260504-calculate_delta_psi.py <input.h5ad> [options]
 """
 
 import argparse
@@ -269,7 +269,7 @@ def process_gene(args):
             )
 
     except Exception as e:
-        # GLM convergence or numerical failure — return NaN
+        # GLM convergence or numerical failure: return NaN
         for j in range(n_sites):
             result_sites.append(
                 {

@@ -1,4 +1,4 @@
-name: R_downstream
+name: apa-r
 channels:
   - conda-forge
   - bioconda

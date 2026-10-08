@@ -1,11 +1,11 @@
 #!/usr/bin/env -S Rscript --vanilla
 # =============================================================================
-# 261007-DTU_curated_genelevel_unadj.R
+# 01-261007-DTU_curated_genelevel_unadj.R
 #
 # Purpose
 #   Gene-level DRIMSeq differential transcript (3'UTR isoform) usage, ASD vs CTRL,
 #   on the curated blood cohort (71 samples: obs status_split in {Train, Test_original};
-#   40 ASD / 31 CTRL; reference level = CTRL). Fits, in ONE R session and in this order:
+#   40 ASD / 31 CTRL; reference level = CTRL). Fits, in one R session and in this order:
 #     1. sexadj : full ~ Batch + Sex + Diagnosis  vs  null ~ Batch + Sex
 #     2. unadj  : full ~ Batch + Diagnosis        vs  null ~ Batch        (primary model)
 #   Optional (--compadj, separate session in the original):
@@ -17,28 +17,28 @@
 #   (2,217 genes with a finite P).
 #
 # Supports
-#   Fig. 4B (blood DTU volcano / 81-gene primary signature) and fig. S4C (confound
-#   sensitivity: +Sex, +Sex+NLRproxy). Consumers: 260614-DTU_primary_vs_confound_sensitivity.ipynb,
-#   260614-crosstissue_convergence.ipynb, 260615-within_family_systematic_apa.ipynb,
-#   paper_2026_ASD/Fig5/fig5b_dtu_volcano.ipynb. Delta-psi / delta-length per gene
+#   Fig. 4B (blood DTU volcano; 81-gene signature) and fig. S4C (gene groups). The
+#   sex-adjusted and composition-adjusted fits are sensitivity checks not shown in the paper. Read by
+#   figures/fig4/fig5c_convergence.ipynb, analysis/blood/07-260615-within_family_systematic_apa.ipynb,
+#   figures/fig4/fig5b_dtu_volcano.ipynb. Delta-psi / delta-length per gene
 #   (gene_dpsi_curated.csv, gene_dlen_curated.csv) come from the companion script
-#   261007-DTU_curated_genelevel_dpsi_dlen.py.
+#   02-261007-DTU_curated_genelevel_dpsi_dlen.py.
 #
-# Reproducibility (IMPORTANT)
-#   dmPrecision estimates the common precision on a RANDOM 10% subset of genes
+# Reproducibility
+#   dmPrecision estimates the common precision on a random 10% subset of genes
 #   (base::sample in the main process; BiocParallel 1.40 does not touch the global RNG).
-#   The archived outputs are reproduced EXACTLY only with set.seed(123) once at the top
-#   and the sex-adjusted model fitted BEFORE the primary model in the same session
+#   The archived outputs are reproduced exactly only with set.seed(123) once at the top
+#   and the sex-adjusted model fitted before the primary model in the same session
 #   (i.e. the primary model uses the 2nd random draw). Fitting the primary model first
 #   (1st draw) gives 80 instead of 81 hits. Do not change the seed or the model order.
 #   compadj was written by a separate run (7 min later) whose RNG state is unknown:
-#   --compadj runs it in a fresh session with set.seed(123) and is NOT bit-exact (see
+#   --compadj runs it in a fresh session with set.seed(123) and is not bit-exact (see
 #   Verification). Number of workers does not affect the results.
 #
 # Verification (2026-10-07, run with --outdir in a scratch dir)
-#   dtu_unadj_gene/feature.csv and dtu_sexadj_gene/feature.csv: BYTE-IDENTICAL to the
+#   dtu_unadj_gene/feature.csv and dtu_sexadj_gene/feature.csv: byte-identical to the
 #   archived files (81 / 4 gene hits; 2,217 / 3,215 finite gene P; max |d log10 P| = 0).
-#   dtu_compadj_*.csv: NEAR only - same single gene hit, but per-gene P differ (max
+#   dtu_compadj_*.csv: near only - same single gene hit, but per-gene P differ (max
 #   |d log10 P| ~0.26; finite gene P 3,124 vs 3,112). Tried set.seed(123) with 0-3 prior
 #   dmPrecision draws; none exact. NLRproxy itself was not reconstructed.
 #
@@ -48,7 +48,7 @@
 #       (136 samples x 26,142 sites / 8,338 genes; var utr_name = Ensembl gene id)
 #   --compadj only: 2025_analyses/DTU_curated_sexadj/nlr_proxy_curated.csv
 #       (per-sample UTR-derived neutrophil:lymphocyte proxy; its generating code was not
-#       archived and is NOT reconstructed here - used as a fixed input)
+#       archived and is not reconstructed here - used as a fixed input)
 #
 # Outputs (default outdir = $M26_DATA_ROOT/3utr/Blood/2025_analyses/DTU_curated_sexadj)
 #   dtu_sexadj_gene.csv, dtu_sexadj_feature.csv
@@ -57,10 +57,10 @@
 #   Each table: DRIMSeq results() sorted by adj_pvalue (stable; NA last), write.csv(row.names = FALSE).
 #   Existing files are never overwritten unless --overwrite is given.
 #
-# How to run (conda env R_downstream; ~10 min for both models with 8 workers)
-#   conda run -n R_downstream Rscript 261007-DTU_curated_genelevel_unadj.R --outdir /path/to/scratch
-#   conda run -n R_downstream Rscript 261007-DTU_curated_genelevel_unadj.R --outdir /path --workers 8
-#   conda run -n R_downstream Rscript 261007-DTU_curated_genelevel_unadj.R --outdir /path --compadj
+# How to run (conda env apa-r; ~10 min for both models with 8 workers)
+#   conda run -n apa-r Rscript 01-261007-DTU_curated_genelevel_unadj.R --outdir /path/to/scratch
+#   conda run -n apa-r Rscript 01-261007-DTU_curated_genelevel_unadj.R --outdir /path --workers 8
+#   conda run -n apa-r Rscript 01-261007-DTU_curated_genelevel_unadj.R --outdir /path --compadj
 #   Options: --outdir DIR, --workers N (default 8), --compadj, --overwrite
 #
 # Provenance
@@ -68,8 +68,8 @@
 #   dtu_unadj_feature.csv, dtu_sexadj_gene.csv, dtu_sexadj_feature.csv (written together
 #   2026-06-14 08:13) and, approximately, dtu_compadj_*.csv (2026-06-14 08:20); original
 #   generating code was not archived. Data loading / DRIMSeq calls follow the
-#   contemporaneous project script
-#   Classifications/2025/LOBO_CV/260614-LOBOCV_genelevel_curated_ridge_NOsexadj.R.
+#   project's LOBO-CV script of the same period
+#   (260614-LOBOCV_genelevel_curated_ridge_NOsexadj.R, not included).
 # =============================================================================
 
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)

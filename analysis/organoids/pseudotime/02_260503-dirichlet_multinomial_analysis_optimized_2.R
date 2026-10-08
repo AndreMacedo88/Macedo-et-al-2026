@@ -3,10 +3,10 @@
 # ============================================================================
 # Optimized_2 Dirichlet-Multinomial Regression for 3'UTR Usage Along Pseudotime
 #
-# Knoblich-organoid version. Copy of mouse-SVZ
-# 260401-dirichlet_multinomial_analysis_optimized_2.R (publication-rigor:
+# Knoblich-organoid version of the mouse-SVZ script
+# analysis/mouse_svz/02_260401-dirichlet_multinomial_analysis_optimized_2.R (with
 # shared-s, conditional-MLE refits, padded-null safety net, parametric
-# bootstrap, 16-test verification suite).
+# bootstrap and the 16-test verification suite).
 #
 # Differences from the mouse version:
 #   --pseudotime_col <name>     obs column to use for pseudotime (default:
@@ -16,7 +16,7 @@
 #                               lineage automatically.
 #
 #   --covariate_cols <a,b,...>  comma-separated obs column names to include as
-#                               fixed-effect factors in BOTH null and full
+#                               fixed-effect factors in both null and full
 #                               models. Default: batch_number. Use "none" for
 #                               an intercept-only null.
 #
@@ -39,33 +39,33 @@
 # subset is densified. Frees the full AnnData object before per-gene fitting.
 # cells_used.csv is written to output_dir for full reproducibility.
 #
-# Recommended invocation pattern (in tmux, one per lineage):
+# Example invocation (one run per lineage):
 #
 #   IN=$M26_DATA_ROOT/3utr/organoids/knoblich/utrcalling/\
 # merged_bw12_above10cts_apa_named_annotated_fix_pt.h5ad
 #
-#   ./260503-dirichlet_multinomial_analysis_optimized_2.R $IN \
+#   ./02_260503-dirichlet_multinomial_analysis_optimized_2.R $IN \
 #       --pseudotime_col dpt_pseudotime_inhibitory \
 #       --covariate_cols batch_number \
 #       --keep_induced_false_only --subsample_n 3000 --seed 42 \
 #       --bootstrap 0 --calibration_n 200 --ncores 26
 #
-# Bootstrap is OFF by default. Pass --bootstrap 199 to run the parametric
+# Bootstrap is off by default. Pass --bootstrap 199 to run the parametric
 # bootstrap on borderline genes (p_chisq < --bootstrap_pval).
 #
-# Key features inherited from mouse optimized_2:
+# Features shared with the mouse version:
 #   - Shared concentration: s estimated once under full model, used for both
-#     full and null -> restores LRT nesting (ll_full >= ll_null)
+#     full and null, which restores LRT nesting (ll_full >= ll_null)
 #   - Conditional-MLE refit on full beta at s_shared (Stage 1)
 #   - Padded-null safety net for non-concave surfaces (Stage 2)
-#   - Honest exclusion via lrt_status = "optimization_failed" (Stage 3)
+#   - Exclusion of failed fits via lrt_status = "optimization_failed" (Stage 3)
 #   - Per-isoform observed/expected variance-ratio diagnostics
 #   - Optional parametric bootstrap on borderline genes (Phase C)
 #   - Real-data null calibration footprint (Phase D)
 #   - Optional lambda sensitivity sweep (--lambda_sensitivity)
 #   - 16-test verification suite (--test)
 #
-# Design spec: 2026-04-01-dirmult-optimized2-design.md
+# Outputs in output_dir: dirmult_regression_*.csv and .rds, cells_used.csv.
 # ============================================================================
 
 # ===== Section 0: Libraries and Argument Parsing =============================
@@ -500,15 +500,15 @@ optimize_beta_fixed_s <- function(Y, mm, K, beta_init, s, max_iter) {
 
 #' Fit full and null DirMult models for one gene, compute LRT
 #'
-#' optimized_2 (publication-rigor revision): Shared-s pipeline with conditional
-#' MLE refits in *both* the full and null beta subspaces.
+#' optimized_2: shared-s pipeline with conditional
+#' MLE refits in both the full and null beta subspaces.
 #'
 #' Pipeline:
 #'   1. Fit full model jointly (or profile/fixed-s); on failure, fall back to
 #'      fixed-s on the full design at s_trend.
 #'   2. Extract s_shared = fit_full$s.
 #'   3. Refit the full model beta at fixed s_shared (Stage 1). The joint optimum
-#'      beta is NOT in general the conditional MLE at s_shared because L(beta, s)
+#'      beta is not in general the conditional MLE at s_shared because L(beta, s)
 #'      is not concave in beta under DirMult + softmax. The refit produces an
 #'      actual conditional MLE on the full beta subspace, mirroring how the null
 #'      is fit.
@@ -678,7 +678,7 @@ fit_dirmult_gene <- function(Y, mm_full, mm_null, K, method, s_trend,
     # --- Step 4: LRT (both likelihoods at s_shared) ---
     # Stage 3: if ll_full is still below ll_null, the LRT cannot be constructed
     # correctly. Return NA with status "optimization_failed" so the gene is
-    # honestly excluded from BH adjustment rather than reported as p = 1.
+    # excluded from BH adjustment rather than reported as p = 1.
     lrt_status <- "ok"
     if (fit_full$ll < fit_null$ll - 1e-10) {
         lrt_status <- "optimization_failed"
@@ -734,21 +734,21 @@ fit_dirmult_gene <- function(Y, mm_full, mm_null, K, method, s_trend,
 
 #' Parametric bootstrap p-value for the conditional LRT statistic
 #'
-#' Generates B bootstrap datasets from the *fitted null* model
+#' Generates B bootstrap datasets from the fitted null model
 #'   Y_b[i, ] ~ DirMult(n_i, pi_null_i, s_shared)
 #' (cell totals n_i held fixed; conditional bootstrap), refits beta under both
 #' the full and null designs at fixed s_shared, and returns the empirical
 #' p-value
 #'   p_boot = (1 + #{D_b >= D_obs}) / (B + 1).
 #'
-#' Why valid: under H0, Y is exchangeable with the bootstrap replicates because
+#' Validity: under H0, Y is exchangeable with the bootstrap replicates because
 #' both come from the same DirMult(n, pi_null, s_shared). The bootstrap
 #' distribution of D is exact (in the Monte Carlo sense) for the conditional
-#' LRT statistic the method actually computes — bypassing the chi-squared
+#' LRT statistic the method computes, bypassing the chi-squared
 #' approximation, the asymptotic regularity conditions, the concavity
 #' assumption, and the MAP/MLE mismatch.
 #'
-#' Why fast: each bootstrap fit only needs the fast `optimize_beta_fixed_s`
+#' Speed: each bootstrap fit only needs the fast `optimize_beta_fixed_s`
 #' path (no joint optimization, no Hessian, no SE), warm-started from the
 #' original beta_null and beta_full. Each bootstrap fit is ~5-10% the cost of
 #' an original joint fit.
@@ -833,7 +833,7 @@ bootstrap_dirmult_lrt <- function(Y_obs, mm_full, mm_null, K,
             }
         }
         if (fit_b_full$ll < fit_b_null$ll - 1e-10) {
-            # Bootstrap replicate failed Stage 2 too — skip it
+            # Bootstrap replicate failed Stage 2 too; skip it
             D_b[b] <- NA_real_
             next
         }
@@ -1181,9 +1181,9 @@ if (opts$test) {
     # Test 12: Stage 1 conditional-MLE refit closes the joint-vs-conditional gap
     # Constructs a stress regime (small s, narrow pseudotime, sparse counts) where
     # the joint-optimum beta can drift from the conditional MLE at s_shared, then
-    # verifies that fit_dirmult_gene (which now refits beta at s_shared) still
-    # produces ll_full >= ll_null. This is the regime that produced the 275 real
-    # -data violations.
+    # verifies that fit_dirmult_gene (which refits beta at s_shared) still
+    # produces ll_full >= ll_null. This is the regime that produced the 275
+    # real-data violations.
     cat("Test 12: Stage 1 conditional-MLE refit (stress regime)... ")
     t12_pass <- TRUE
     t12_count <- 0L
@@ -1246,7 +1246,7 @@ if (opts$test) {
     # Verifies the padded-null safety net works when invoked: build a synthetic
     # gene, manually run the Stage 1 refit, then artificially zero out the full-
     # model beta (the worst possible warm start) and call optimize_beta_fixed_s
-    # twice — once from the bad init, once from the padded null — and assert
+    # twice (once from the bad init, once from the padded null) and assert
     # that the second always reaches at least the null LL.
     cat("Test 13: Stage 2 padded-null fallback... ")
     set.seed(13L)
@@ -1384,9 +1384,9 @@ if (opts$test) {
     #       pass individually after FWER correction.
     #   (b) Fisher combined test across all 27 cells: X^2 = -2 * sum(log(p_cell))
     #       ~ chi^2(54) under global H0. Requires X^2 p-value > 0.01 globally.
-    # Both must pass. This is strictly more rigorous than the naive "all 27
-    # cells pass at 1%" check (which has ~24% FWER under H0 by Sidak, causing
-    # spurious failures). Uses n=150 per cell for better KS resolution and to
+    # Both must pass. The simpler "all 27
+    # cells pass at 1%" check has ~24% FWER under H0 (Sidak), causing
+    # spurious failures. Uses n=150 per cell for better KS resolution and to
     # reduce the chance of ties from near-p=1 clustering in the extreme regime.
     cat("Test 16: Multi-regime null calibration grid (27 cells, FWER 1%)... ")
     set.seed(16L)
@@ -1528,7 +1528,7 @@ data <- read_h5ad(opts$data_path)
 n_total <- nrow(data$obs)
 cat("Loaded:", n_total, "cells x", ncol(data$X), "features\n")
 
-# Pull what we need from the AnnData; KEEP X SPARSE for now. Filtering and
+# Pull what we need from the AnnData; keep X sparse for now. Filtering and
 # subsampling happen on the sparse matrix to avoid the 33 GiB peak from
 # densifying the full data set.
 all_cells <- rownames(data$obs)
@@ -1555,14 +1555,14 @@ covariate_df <- if (length(covariate_col_vec) > 0L) {
     data.frame(.dummy_intercept = rep(1L, n_total))
 }
 
-# induced column (needed if --keep_induced_false_only) -- read once.
+# induced column (needed if --keep_induced_false_only); read once.
 induced_chr <- if ("induced" %in% colnames(data$obs)) {
     as.character(data$obs[["induced"]])
 } else {
     rep(NA_character_, n_total)
 }
 
-# ----- Cell-level filters (BEFORE dense conversion) ------------------------
+# ----- Cell-level filters (before dense conversion) ------------------------
 
 # 1. Drop cells with NA in the requested pseudotime column. When a
 #    lineage-specific column is passed, this also restricts to that lineage.
@@ -1769,29 +1769,29 @@ fit_one_utr <- function(utr, lambda_val, lambda_method = NULL) {
 }
 
 # --- Dynamic load-balanced dispatch helpers ------------------------------
-# Replaces pblapply(cl=cluster), which uses STATIC chunked scheduling
+# Replaces pblapply(cl=cluster), which uses static chunked scheduling
 # (parLapply: contiguous blocks of ~N/ncores genes per worker, with a sync
 # barrier every progress-bar chunk). Static chunking leaves cores idle while
-# a few stragglers finish -- a problem here because per-gene fit cost varies
+# a few stragglers finish, a problem here because per-gene fit cost varies
 # widely (high-K / high-cell genes are much slower) and, when slow genes are
 # adjacent in the gene list, static scheduling can run several-fold slower
-# than ideal (benchmarked 2026-05-27 on the 260526 fork).
+# than ideal (benchmarked 2026-05-27).
 #
-# parLapplyLB(chunk.size=1) dispatches ONE gene at a time to whichever worker
+# parLapplyLB(chunk.size=1) dispatches one gene at a time to whichever worker
 # is free. We split into round-robin progress batches purely for logging;
 # round-robin assignment spreads slow genes across batches so each batch
 # stays balanced.
 #
-# CORRECTNESS:
-#   - Phase B / Phase E (fitting) consume NO randomness -> results bit-identical
-#     to the old static path, just faster.
-#   - Phase C (bootstrap) / Phase D (calibration) DO consume RNG. To keep them
+# Correctness:
+#   - Phase B / Phase E (fitting) consume no randomness, so results are bit-identical
+#     to the static path.
+#   - Phase C (bootstrap) / Phase D (calibration) do consume RNG. To keep them
 #     reproducible under dynamic dispatch (where worker assignment is timing-
-#     dependent) each gene now reseeds its own RNG via gene_seed_from() at task
-#     entry. This makes those phases reproducible across runs AND core counts
-#     -- which the original inherited-fork-RNG path was NOT. NOTE: bootstrap /
+#     dependent) each gene reseeds its own RNG via gene_seed_from() at task
+#     entry. This makes those phases reproducible across runs and core counts
+#     (the earlier inherited-fork-RNG path was not). Note: bootstrap /
 #     calibration p-values therefore differ from any pre-2026-05-27 run within
-#     Monte-Carlo noise (they are now deterministic given --seed). The headline
+#     Monte-Carlo noise (they are now deterministic given --seed). The main
 #     chi-squared LRT (p_value_chisq, padj) is unaffected: it comes entirely
 #     from the deterministic Phase B.
 dispatch_lb <- function(cl, idx, FUN, n_progress = 20L, label = "") {
@@ -1907,8 +1907,8 @@ if (opts$bootstrap > 0L) {
 # --- Phase D: Real-data empirical calibration footprint ---
 # Sample N random tested genes, generate one null replicate from each fitted
 # null model, refit, and KS-test the resulting p-values against the uniform.
-# This is an end-to-end calibration check on the *exact* parameter regimes
-# present in the user's data, complementing the synthetic-data Test 16.
+# This is an end-to-end calibration check on the exact parameter regimes
+# present in the data, complementing the synthetic-data Test 16.
 
 calibration_result <- list(
     ks_p = NA_real_, n_used = 0L, n_attempted = 0L
@@ -1933,7 +1933,7 @@ if (opts$calibration_n > 0L) {
         # L'Ecuyer-CMRG + per-gene seeding so the dynamic load-balanced
         # dispatch is reproducible (calibration draws consume RNG via
         # rgamma/rmultinom). The original pbsapply path inherited the parent
-        # fork RNG per worker and was NOT reproducible across core counts.
+        # fork RNG per worker and was not reproducible across core counts.
         RNGkind("L'Ecuyer-CMRG")
         clusterSetRNGStream(cl_d, opts$seed)
         cal_list <- dispatch_lb(cl_d, sample_idx, function(j) {
@@ -2063,20 +2063,20 @@ umis <- tibble(utr_name = utr_names, UMIs = colSums(X)) %>%
 results_df <- results_df %>% left_join(umis, by = "utr_name")
 
 # Filter and adjust p-values: drop NA p-values (skipped, optimization_failed,
-# null_fit_failed, error). These are honestly excluded rather than reported as
+# null_fit_failed, error). These are excluded rather than reported as
 # p = 1 with deviance = 0.
 results_df <- results_df %>%
     filter(!is.na(p_value))
 
 # Restrict BH adjustment to fully-converged genes (converged == TRUE &
 # lrt_status == "ok").  Non-converged genes have unreliable deviance statistics
-# because the optimizer stopped before reaching the true maximum — their
+# because the optimizer stopped before reaching the true maximum; their
 # p-values tend to be artificially small, which inflates the BH threshold and
 # produces spurious discoveries among the converged genes.  Setting padj = NA
 # for non-converged genes keeps them in the output for inspection but excludes
-# them from FDR control.  Downstream notebooks (e.g. composite_ranking) already
-# filter to converged == TRUE before use; this change makes the CSV consistent
-# with that intent from the outset.
+# them from FDR control.  Downstream notebooks (e.g. composite_ranking) also
+# filter to converged == TRUE before use, so the CSV is consistent
+# with them.
 #
 # Use p_value_chisq (not p_value) as the basis for BH.  p_value is the
 # bootstrap-corrected value for borderline genes (chi-sq p < BOOTSTRAP_PVAL)
@@ -2110,7 +2110,7 @@ n_conv <- sum(results_df$converged, na.rm = TRUE)
 n_full_conv <- sum(results_df$full_converged, na.rm = TRUE)
 n_ll_viol <- sum(results_df$ll_full < results_df$ll_null - 1e-6, na.rm = TRUE)
 
-# Counts of excluded statuses among ALL processed genes
+# Counts of excluded statuses among all processed genes
 all_status <- vapply(results_list, function(x) extract_chr(x, "lrt_status", "skipped"), character(1))
 n_lrt_failed <- sum(all_status == "optimization_failed")
 n_null_fail <- sum(all_status == "null_fit_failed")
@@ -2184,8 +2184,8 @@ cat("Saved: ", rds_path, "\n", sep = "")
 # kept) and writes a comparison CSV with per-gene deviance, p_value_chisq, and
 # s_shared at each setting. The expected outcome is that p-values are highly
 # correlated for genes with reasonable cells_per_param, with divergence only
-# for low-power genes where the penalty is doing real work. This addresses
-# the MAP/MLE-mismatch reviewer concern empirically.
+# for low-power genes where the penalty has an effect. This checks
+# the effect of the MAP/MLE mismatch empirically.
 if (opts$lambda_sensitivity) {
     cat("\nPhase E: Lambda sensitivity sweep (lambda in {0, 1, 2})...\n")
     lambda_grid <- c(0, 1, 2)

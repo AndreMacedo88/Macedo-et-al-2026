@@ -1,23 +1,23 @@
 #!/usr/bin/env -S Rscript --vanilla
 # =============================================================================
-# GO-based FUNCTIONAL-CATEGORY annotation of the within-family DTU (S5h) genes.
+# GO-based functional-category annotation of the within-family DTU genes (S5h panel, Fig. 4D, 4E).
 # -----------------------------------------------------------------------------
-# The S5h lollipop originally coloured each gene by ONE hand-curated theme (a THEME dict).
+# The S5h lollipop originally coloured each gene by one hand-curated theme (a theme dict).
 # That is incomplete: many genes belong to >1 category (e.g. CYTH1 is a GTPase/cytoskeleton
-# ARF-GEF that is ALSO immune - highly expressed in NK/T cells). This script replaces the
-# hand curation with a REPRODUCIBLE, multi-membership assignment from Gene Ontology:
+# ARF-GEF that is also immune - highly expressed in NK/T cells). This script replaces the
+# hand curation with a reproducible, multi-membership assignment from Gene Ontology:
 #   membership(gene, category) = TRUE iff the gene is annotated (propagated, GOALL = term +
-#   all ancestors) to ANY anchor GO term of that category. A gene can be in several categories.
-# Anchor GO terms per Fig-5 theme (broad, standard roots so propagation is authoritative):
+#   all ancestors) to any anchor GO term of that category. A gene can be in several categories.
+# Anchor GO terms per Fig. 4 theme (broad, standard roots so propagation is authoritative):
 #   immune/myeloid       : GO:0002376 immune system process (BP)
 #   RNA-binding/poly(A)   : GO:0003723 RNA binding (MF), GO:0006396 RNA processing (BP)
 #   GTPase/cytoskeleton  : GO:0005856 cytoskeleton (CC), GO:0003924 GTPase activity (MF),
 #                          GO:0007264 small GTPase mediated signal transduction (BP),
 #                          GO:0031267 small GTPase binding (MF)
 #   chromatin            : GO:0006325 chromatin organization (BP), GO:0000785 chromatin (CC)
-# Also writes, per (gene,category), the gene's OWN (direct) GO terms that fall under the anchor
+# Also writes, per (gene,category), the gene's own (direct) GO terms that fall under the anchor
 # (the evidence), so each attribution can be inspected. Genes in none -> "other".
-# Env: conda R_downstream. Output: DRIMSeq_allpairs_genewise/gene_category_membership.csv (+ _evidence.csv)
+# Env: conda apa-r. Output: DRIMSeq_allpairs_genewise/gene_category_membership.csv (+ _evidence.csv)
 # =============================================================================
 DATA_ROOT <- Sys.getenv("M26_DATA_ROOT")  # data directory (see README)
 if (!nzchar(DATA_ROOT)) stop("Set M26_DATA_ROOT (see README)")
@@ -42,7 +42,7 @@ clean_sym <- function(s) {
   sub("[|/].*$", "", sub("^[|,/ ]+", "", s))
 }
 genes <- unique(vapply(dtu$symbol, clean_sym, character(1)))
-# H3-3B / RIPOR2 etc. are current HGNC symbols; map SYMBOL, fall back to ALIAS for any miss.
+# H3-3B / RIPOR2 etc. are current HGNC symbols; map symbol, fall back to ALIAS for any miss.
 entrez <- suppressMessages(mapIds(org.Hs.eg.db, genes, "ENTREZID", "SYMBOL"))
 miss <- names(entrez)[is.na(entrez)]
 if (length(miss)) {
@@ -143,7 +143,7 @@ for (g in genes) {
     is_member <- any(anchors %in% gset)
     memb[memb$symbol == g, cn] <- is_member
     if (is_member) {
-      # evidence = this gene's DIRECT terms that are (or descend from) an anchor
+      # evidence = this gene's direct terms that are (or descend from) an anchor
       supp <- character(0)
       for (i in seq_len(nrow(gd))) {
         t <- gd$GO[i]
@@ -189,12 +189,12 @@ message(
 message("saved -> ", D, "/gene_category_membership.csv (+ _evidence.csv)")
 
 # =============================================================================
-# CURATION: documented, paper-level refinement of the systematic GO calls.
-# GO propagation (i) OVER-assigns via promiscuous single terms - the bare 'RNA binding' root from
+# Curation: documented, paper-level refinement of the systematic GO calls.
+# GO propagation (i) over-assigns via promiscuous single terms - the bare 'RNA binding' root from
 # proteome-wide RNA-interactome screens, or lone spurious CC terms (centrosome / mitotic spindle /
-# actin cytoskeleton attached to non-cytoskeletal proteins) - and (ii) UNDER-assigns sparsely
-# annotated genes. Each DROP/ADD below is explicit and reasoned (written to the curation log), so
-# the final figure categories are transparent and reviewer-checkable.
+# actin cytoskeleton attached to non-cytoskeletal proteins) - and (ii) under-assigns sparsely
+# annotated genes. Each DROP/ADD below is explicit and has a stated reason (written to the curation log),
+# so the final figure categories can be checked.
 # =============================================================================
 DROP <- list(
   c(

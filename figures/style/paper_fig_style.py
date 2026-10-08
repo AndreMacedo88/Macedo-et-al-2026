@@ -6,7 +6,7 @@ Single source of truth for the panel notebooks of Figures 1 and 2:
   * Nature-compliant font sizes;
   * matplotlib rcParams tuned for editable-text SVG output;
   * `save_and_show()`, which writes each panel to SVG (editable text) + PNG
-    and then renders the *on-disk* file inline, so the notebook cell shows
+    and then renders the on-disk file inline, so the notebook cell shows
     exactly what was saved.
 
 Each panel notebook does:
@@ -72,14 +72,14 @@ FONT_LEGEND = 5.5  # legend text
 FONT_LEGEND_TITLE = 6
 FONT_ANNOT = 6  # in-panel annotations
 
-# ── output root (the 3utr data tree, NOT the notebooks git repo) ────────
+# ── output root (the 3utr data tree, not the notebooks git repo) ────────
 OUT_ROOT = Path(os.environ.get("M26_RESULTS_ROOT", Path(__file__).resolve().parents[2] / "results"))
 
 # ── Nature column grid (single source of truth for panel widths) ─────────
 # Page = 183 mm wide (Nature / Nature Medicine double column) x up to 247 mm.
 # Half-width panels tile 2-up within the page (85 + gap + 85 ~< 183);
 # full-width panels span it (174 + side margins). Heights are chosen per
-# panel (content-driven); only the WIDTHS are fixed to keep a clean grid.
+# panel (content-driven); only the widths are fixed to keep a clean grid.
 GRID_DPI = 300
 
 
@@ -104,15 +104,15 @@ def px_to_in(px):
 
 # ── the tiling grid: more panel sizes than just half / full ────────────────
 # Panels tile within the page separated by a fixed GAP_MM gutter, so any set of
-# spans that adds up to a whole grid fills the extent EXACTLY:
-#     HALF        + gap + HALF                  = FULL   (85 + 4 + 85 = 174)
-#     QUARTER     + gap + THREEQUARTER          = FULL
-#     THIRD       + gap + TWOTHIRD              = FULL
-#     HALF        + gap + QUARTER + gap + QUARTER = FULL  (halves & quarters nest)
-# quarter / half / full are ONE nested base-4 grid (2*QUARTER+gap = HALF,
-# 2*HALF+gap = FULL), so their members mix-and-match freely on a row. Thirds are
-# a SEPARATE base-3 grid: put thirds only next to thirds, never next to quarters.
-# The SAME model drives heights, using the page's max height (FULL_H_MM) as the
+# spans that adds up to a whole grid fills the extent exactly:
+#     half        + gap + half                  = full   (85 + 4 + 85 = 174)
+#     quarter     + gap + threequarter          = full
+#     third       + gap + twothird              = full
+#     half        + gap + quarter + gap + quarter = full  (halves & quarters nest)
+# quarter / half / full are one nested base-4 grid (2*quarter+gap = half,
+# 2*half+gap = full), so their members mix-and-match freely on a row. Thirds are
+# a separate base-3 grid: put thirds only next to thirds, never next to quarters.
+# The same model drives heights, using the page's max height (FULL_H_MM) as the
 # full extent, so quarter/third/... heights give a consistent vertical rhythm and
 # also tile. To shuffle panels: just swap the *_W_PX / *_H_PX constant a panel
 # uses (e.g. HALF_W_PX -> THREEQUARTER_W_PX). For any division not named below
@@ -159,15 +159,15 @@ def grid_h_in(span, n, **kw):
 
 
 # ── named column widths (mm) ── HALF_W_MM / FULL_W_MM defined above ────────
-# EIGHTH is the next rung of the SAME nested base-2 ladder as quarter/half/full
-# (2*EIGHTH + gap = QUARTER, 4*EIGHTH + 3*gap = HALF), so it mixes freely with them.
+# Eighth is the next rung of the same nested base-2 ladder as quarter/half/full
+# (2*eighth + gap = quarter, 4*eighth + 3*gap = half), so it mixes freely with them.
 EIGHTH_W_MM = grid_w_mm(1, 8)  # 18.25 mm
 QUARTER_W_MM = grid_w_mm(1, 4)  # 40.5 mm  (= grid_w_mm(1, 4))
 THIRD_W_MM = grid_w_mm(1, 3)  # 55.33 mm
 TWOTHIRD_W_MM = grid_w_mm(2, 3)  # 114.67 mm
 THREEQUARTER_W_MM = grid_w_mm(3, 4)  # 129.5 mm
 
-# ── named row heights (mm) ── fractions of the FULL page height ────────────
+# ── named row heights (mm) ── fractions of the full page height ────────────
 EIGHTH_H_MM = grid_h_mm(1, 8)  # 27.38 mm  -> half a quarter-height (2 stack -> QUARTER_H)
 QUARTER_H_MM = grid_h_mm(1, 4)  # 58.75 mm  -> the go-to "short panel" height
 THIRD_H_MM = grid_h_mm(1, 3)  # 79.67 mm  -> the go-to "medium panel" height
@@ -206,7 +206,7 @@ TWOTHIRD_H_IN = mm_to_in(TWOTHIRD_H_MM)
 THREEQUARTER_H_IN = mm_to_in(THREEQUARTER_H_MM)
 FULL_H_IN = mm_to_in(FULL_H_MM)
 
-# consistency guardrails: the nested base-2 grid must reproduce the anchors
+# consistency checks: the nested base-2 grid must reproduce the anchors
 assert abs(grid_w_mm(2, 4) - HALF_W_MM) < 1e-9, "grid must reproduce HALF_W_MM"
 assert abs(grid_w_mm(4, 4) - FULL_W_MM) < 1e-9, "grid must reproduce FULL_W_MM"
 assert abs(grid_h_mm(2, 8) - QUARTER_H_MM) < 1e-9, "2 eighths + gap must equal a quarter"
@@ -226,7 +226,7 @@ def apply_rcparams():
                 "Nimbus Sans",
                 "DejaVu Sans",
             ],
-            # render math in the SAME face as the text: Liberation Sans has every glyph we
+            # render math in the same face as the text: Liberation Sans has every glyph we
             # use (Delta, psi, rho, prime, minus, x, >=), so Greek/variables/operators all
             # match the labels and the R panels -- no DejaVu/STIX mix.
             "mathtext.fontset": "custom",
@@ -245,7 +245,7 @@ def apply_rcparams():
             "pdf.fonttype": 42,  # TrueType (editable) if PDF is ever requested
             "ps.fonttype": 42,
             "savefig.dpi": 300,
-            "savefig.bbox": "standard",  # NOT 'tight' -> preserve the exact figsize
+            "savefig.bbox": "standard",  # Not 'tight' -> preserve the exact figsize
             "figure.dpi": 150,
         }
     )
@@ -276,12 +276,12 @@ def scatter_random_order(
     zorder=2,
     **kw,
 ):
-    """Scatter points in a fixed-seed RANDOM order.
+    """Scatter points in a fixed-seed random order.
 
-    Every UMAP in the paper must be plotted with cells in random order so that no
-    cell-label group is systematically drawn on top of another (project rule). Pass
-    EITHER per-point colours as `rgba` (an (n, 4) array, e.g. from `palette_rgba`) for
-    categorical colouring, OR a per-point scalar `c` (+ `cmap`) for a continuous colour
+    Every UMAP in the paper is plotted with cells in random order so that no
+    cell-label group is systematically drawn on top of another. Pass
+    either per-point colours as `rgba` (an (n, 4) array, e.g. from `palette_rgba`) for
+    categorical colouring, or a per-point scalar `c` (+ `cmap`) for a continuous colour
     mapping. The permutation is seeded so the figure is reproducible.
 
     Returns the matplotlib PathCollection (so a colorbar can be attached when `c` is used).
@@ -351,16 +351,16 @@ def permutation_calibrated_p(
     """Recalibrate chi-squared LRT p-values onto the within-sample permutation scale.
 
     The cell-level DM-LRT chi-squared p-values reach implausibly small values (e.g.
-    -log10 p ~ 250) that statisticians distrust because each cell is not an independent
-    sample (pseudoreplication). This fits a robust linear map on the -log10 scale
+    -log10 p ~ 250) because cells are not independent samples
+    (pseudoreplication). This fits a robust linear map on the -log10 scale
     (x = -log10 p_chisq, y = -log10 p_perm) over the genes where the within-sample
-    permutation null is *informative* (not at its 1/(B+1) floor), then applies it to all
+    permutation null is informative (not at its 1/(B+1) floor), then applies it to all
     genes to produce a "pseudoreplication-calibrated" p-value. The map only ever deflates
     (calibrated -log10 p is capped at the nominal value).
 
-    IMPORTANT: the permutation p is floored at 1/(B+1), so the map is only *measured* up to
+    The permutation p is floored at 1/(B+1), so the map is only measured up to
     ~-log10(min informative p_perm). Beyond `x_fit_max` the calibrated value is an
-    EXTRAPOLATION and is flagged in the returned `extrapolated` mask. On this project's
+    extrapolation and is flagged in the returned `extrapolated` mask. On this project's
     mouse data the measured slope is ~0.65 and lambda ~1.05-1.2 (mild), i.e. the chi-sq
     LRT is well calibrated against the permutation null over the measurable range.
 
@@ -368,7 +368,7 @@ def permutation_calibrated_p(
     ----------
     p_chisq, p_perm : array-like of per-gene p-values.
     at_floor : boolean array; True where p_perm is at its permutation floor (e.g.
-        n_perm_hits == 0) and so must be EXCLUDED from the calibration fit.
+        n_perm_hits == 0) and so must be excluded from the calibration fit.
     fit_xmin, fit_xmax : restrict the -log10 p_chisq window used to fit the map.
 
     Returns dict(p_cal, neglog_cal, slope, intercept, x_fit_max, extrapolated, lam_gene).
@@ -443,7 +443,7 @@ def save_and_show(
     paths_str = ", ".join(str(p) for p in written.values())
     print(f"saved {panel}: {paths_str}  ({w}x{h} px @ {dpi} dpi)")
 
-    # close so the figure is NOT auto-shown; we display the stored file instead
+    # close so the figure is not auto-shown; we display the stored file instead
     plt.close(fig)
     if show == "png" and "png" in written:
         display(Image(filename=str(written["png"])))
