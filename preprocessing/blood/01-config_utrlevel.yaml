@@ -1,0 +1,7 @@
+# input_dir: "${M26_DATA_ROOT}/raw/blood/"
+index_star: "${M26_DATA_ROOT}/common_files/indices/Homo_sapiens_GRCh38/"
+human_gtf: "${M26_DATA_ROOT}/common_files/annotations/Homo_sapiens.GRCh38.104.gtf"
+anno_csv: "${M26_DATA_ROOT}/3utr/Blood/20240724/anno_20240724.csv"
+fastq_dir: "${M26_DATA_ROOT}/raw/blood/240724_VH00693_188_AACJYJNHV_ASD_blood_siblings/240724_VH00693_188_AACJYJNHV/"
+results_dir: "${M26_DATA_ROOT}/3utr/Blood/20240724/2025-utrcalling/"
+results_base_name: "UTR_count_table_UTRlevel"

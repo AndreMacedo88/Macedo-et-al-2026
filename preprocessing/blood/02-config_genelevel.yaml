@@ -1,0 +1,6 @@
+human_gtf: "${M26_DATA_ROOT}/common_files/annotations/Homo_sapiens.GRCh38.104.gtf"
+base_dir: "${M26_DATA_ROOT}/3utr/Blood/all_till_20240724"
+process_dir: "${M26_DATA_ROOT}/3utr/Blood/all_till_20240724/processing"
+results_dir: "${M26_DATA_ROOT}/3utr/Blood/all_till_20240724/utrcalling/"
+results_base_name: "UTR_count_table_genelevel"
+raw_utr_lengths: "${M26_DATA_ROOT}/3utr/Blood/all_till_20240724/utrcalling/UTR_count_table_genelevel_raw.h5ad"

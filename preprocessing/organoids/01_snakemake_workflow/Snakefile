@@ -1,0 +1,392 @@
+import os
+
+DATA_ROOT = os.environ["M26_DATA_ROOT"]  # data directory (see README)
+
+
+def _expand_env(value):
+    """Expand ${M26_DATA_ROOT} in config values."""
+    if isinstance(value, str):
+        return os.path.expandvars(value)
+    if isinstance(value, dict):
+        return {k: _expand_env(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_expand_env(v) for v in value]
+    return value
+
+import pandas as pd
+import os
+
+
+configfile: os.path.join(workflow.basedir, "config.yaml")
+config.update(_expand_env(dict(config)))
+
+
+samples_df = pd.read_csv(config["samples"], sep="\t")
+SAMPLES = samples_df["library_id"].astype(str).tolist()
+SAMPLE_INFO = {
+    str(row["library_id"]): row for _, row in samples_df.iterrows()
+}
+
+wildcard_constraints:
+    sample="|".join(SAMPLES),
+
+PROJECT_DIR = config["paths"]["project_dir"]
+O_DRIVE = config["paths"]["o_drive"]
+FASTQ_DIR = f"{O_DRIVE}/fastqs"
+LOCAL_FASTQ_DIR = f"{PROJECT_DIR}/fastqs"
+OUTDIR = f"{PROJECT_DIR}/cellranger"
+UTR_DIR = f"{PROJECT_DIR}/utrcalling"
+METADATA_DIR = f"{PROJECT_DIR}/metadata"
+
+
+rule all:
+    input:
+        f"{OUTDIR}/aggregated_annotated.h5ad",
+        f"{UTR_DIR}/merged_raw_annotated.h5ad",
+        f"{UTR_DIR}/merged_bw12_above10cts_apa_named_percentages_annotated.h5ad",
+
+
+# =========================================================================
+# Data acquisition
+# =========================================================================
+
+# -------------------------
+# Download FASTQs from ENA FTP to o_drive and symlink locally.
+# Each library has one or more ERR accessions (Batch 1 = 2 lanes → 2 ERRs).
+# fastq_urls in samples.tsv is a semicolon-separated list of full ftp:// URLs
+# for the library's R1/R2 files across all its lanes. I1/I2 are excluded
+# (Cell Ranger doesn't use them for 10x 3' v3 chemistry).
+# -------------------------
+rule download_fastqs:
+    output:
+        flag=f"{LOCAL_FASTQ_DIR}/{{sample}}/.ready",
+    params:
+        urls=lambda wc: SAMPLE_INFO[wc.sample]["fastq_urls"],
+        o_drive_dir=FASTQ_DIR,
+        local_dir=lambda wc: f"{LOCAL_FASTQ_DIR}/{wc.sample}",
+    shell:
+        """
+        mkdir -p {params.o_drive_dir} {params.local_dir}
+
+        IFS=';' read -ra URLS <<< "{params.urls}"
+        for url in "${{URLS[@]}}"; do
+            fname="$(basename "$url")"
+            o_drive_path="{params.o_drive_dir}/$fname"
+
+            # Download atomically via .part: a crashed wget leaves behind
+            # the .part, never a 0-byte "final" file that the next run would
+            # mistake for a completed download.
+            if [ ! -s "$o_drive_path" ]; then
+                rm -f "$o_drive_path"
+                # Outer retry loop: wget's --tries retries network errors but
+                # not server errors (exit 8), which ENA returns under load.
+                for attempt in 1 2 3 4 5; do
+                    wget -c --progress=bar:force:noscroll --timeout=60 --tries=5 \
+                        "$url" -O "$o_drive_path.part" && break
+                    echo "wget attempt $attempt failed; sleeping before retry"
+                    sleep $((attempt * 30))
+                done
+                [ -s "$o_drive_path.part" ] || {{ echo "Failed to download $url"; exit 1; }}
+                mv "$o_drive_path.part" "$o_drive_path"
+            fi
+
+            ln -sf "$o_drive_path" "{params.local_dir}/$fname"
+        done
+
+        touch {output.flag}
+        """
+
+
+# -------------------------
+# Download cell-level metadata from Zenodo (metadata.tsv)
+# Contains: barcode, nCount_RNA, nFeature_RNA, percent.mito, percent.ribo,
+#           library, gRNA, induced, celltype
+# -------------------------
+rule download_metadata:
+    output:
+        metadata=f"{METADATA_DIR}/metadata.tsv",
+    params:
+        url=config["metadata"]["zenodo_url"],
+    shell:
+        """
+        mkdir -p {METADATA_DIR}
+        wget -q -O {output.metadata} "{params.url}"
+        """
+
+
+# =========================================================================
+# Cell Ranger branch
+# =========================================================================
+
+# -------------------------
+# Cell Ranger count — standard 10x 3' v3.1 with BAM output enabled.
+# BAM is required for utrcalling (standard_10x protocol reads CB/UB tags).
+# -------------------------
+rule cellranger_count:
+    input:
+        ref=config["cellranger"]["transcriptome"],
+        flag=f"{LOCAL_FASTQ_DIR}/{{sample}}/.ready",
+    output:
+        h5=f"{OUTDIR}/{{sample}}/outs/filtered_feature_bc_matrix.h5",
+        bam=f"{OUTDIR}/{{sample}}/outs/possorted_genome_bam.bam",
+        bai=f"{OUTDIR}/{{sample}}/outs/possorted_genome_bam.bam.bai",
+    threads: config["cellranger"]["cores"]
+    params:
+        fastqs=lambda wc: f"{LOCAL_FASTQ_DIR}/{wc.sample}",
+        o_drive_outs=lambda wc: f"{O_DRIVE}/cellranger/{wc.sample}/outs",
+    shell:
+        """
+        rm -rf {OUTDIR}/{wildcards.sample} && \
+        cd {OUTDIR} && cellranger count \
+            --id={wildcards.sample} \
+            --transcriptome={input.ref} \
+            --fastqs={params.fastqs} \
+            --include-introns=true \
+            --create-bam=true \
+            --localcores={threads} \
+            --localmem={config[cellranger][mem_gb]}
+
+        # Move non-essential outputs to o_drive and symlink back.
+        # Kept local: filtered_feature_bc_matrix* (aggregate needs),
+        # metrics_summary.csv, web_summary.html.
+        # BAM/BAI are externalized too (utrcalling reads them via symlink;
+        # pysam follows symlinks transparently).
+        outs="{OUTDIR}/{wildcards.sample}/outs"
+        mkdir -p "{params.o_drive_outs}"
+        for item in analysis raw_feature_bc_matrix raw_feature_bc_matrix.h5 molecule_info.h5 cloupe.cloupe possorted_genome_bam.bam possorted_genome_bam.bam.bai; do
+            src="$outs/$item"
+            [ -e "$src" ] && [ ! -L "$src" ] || continue
+            mv "$src" "{params.o_drive_outs}/"
+            ln -s "{params.o_drive_outs}/$item" "$src"
+        done
+        """
+
+
+# -------------------------
+# Aggregate Cell Ranger filtered matrices into a single AnnData.
+# Only merges matrices + adds `sample` obs. Full cell-level annotation
+# (celltype, gRNA, induced, etc.) is added by the annotate_cells rule.
+# -------------------------
+rule aggregate_cellranger:
+    input:
+        h5s=expand(f"{OUTDIR}/{{sample}}/outs/filtered_feature_bc_matrix.h5", sample=SAMPLES),
+    output:
+        h5ad=f"{OUTDIR}/aggregated.h5ad",
+    params:
+        samples=SAMPLES,
+    conda:
+        "downstr"
+    shell:
+        """
+        python {workflow.basedir}/scripts/aggregate_cellranger.py \
+            {input.h5s} \
+            --samples {params.samples} \
+            -o {output.h5ad}
+        """
+
+
+# =========================================================================
+# UTR calling pipeline (uses Cell Ranger BAM, no STAR alignment needed)
+# =========================================================================
+
+# -------------------------
+# Generate utrcalling annotation CSVs from Zenodo metadata.tsv.
+# Includes all cells (both induced and control) so peak calling downstream
+# operates jointly across conditions.
+# -------------------------
+rule generate_utrcalling_annotations:
+    input:
+        metadata=f"{METADATA_DIR}/metadata.tsv",
+    output:
+        anno=f"{UTR_DIR}/annotations/{{sample}}_anno.csv",
+    conda:
+        "downstr"
+    run:
+        meta = pd.read_csv(input.metadata, sep="\t")
+        lib_id = wildcards.sample
+        metadata_library = SAMPLE_INFO[lib_id]["metadata_library"]
+
+        lib_meta = meta[meta["library"] == metadata_library]
+
+        # Zenodo barcodes use a few formats depending on the batch, e.g.
+        # "206287_rnacount_AAACCCAGTCCAGTTA-1"  (Batch 3 with _rnacount)
+        # "BATCH3_213661_AAACCCAAGGATACGC-1"    (Batch 2 with BATCH3_ prefix)
+        # "AAACCCAGTCACTGAT-1_1"                (Batch 1 with trailing _N)
+        # The 16 bp barcode always sits between the last underscore-joined
+        # prefix chunk and the trailing -N lane index.
+        prefix = f"{metadata_library}_"
+        barcodes = []
+        seen = set()
+        for cell in lib_meta["cell"].astype(str).tolist():
+            trailing = cell[len(prefix):] if cell.startswith(prefix) else cell
+            bc_core = trailing.rsplit("-", 1)[0]
+            bc = f"{bc_core}-1"
+            if bc not in seen:
+                seen.add(bc)
+                barcodes.append(bc)
+
+        print(f"Library {lib_id} ({metadata_library}): "
+              f"{len(barcodes)} unique barcodes from {len(lib_meta)} cells")
+
+        df = pd.DataFrame({
+            "barcode": barcodes,
+            "batch_number": 1,
+            "sample_id": lib_id,
+        })
+        df.to_csv(output.anno, index=False)
+
+
+# -------------------------
+# UTR mapping (per sample, on the Cell Ranger BAM).
+# Uses standard_10x protocol which reads CB/UB tags from possorted BAM.
+# -------------------------
+rule utr_mapping_raw:
+    input:
+        bam=f"{OUTDIR}/{{sample}}/outs/possorted_genome_bam.bam",
+        bai=f"{OUTDIR}/{{sample}}/outs/possorted_genome_bam.bam.bai",
+        anno=f"{UTR_DIR}/annotations/{{sample}}_anno.csv",
+    output:
+        out=f"{UTR_DIR}/{{sample}}_raw.h5ad",
+        peaks=f"{UTR_DIR}/{{sample}}_raw_kde.h5ad",
+    params:
+        gtf=config["genome"]["gtf"],
+        platform=config["utrcalling"]["protocol_platform"],
+        version=config["utrcalling"]["protocol_version"],
+        feature=config["utrcalling"]["feature"],
+        level=config["utrcalling"]["summarization_level"],
+    threads: 6
+    conda:
+        "utrcalling"
+    shell:
+        """
+        utrcalling run {params.gtf} \
+            -a {input.bam} \
+            -f {params.feature} \
+            -s {params.level} \
+            -p {params.platform} \
+            -v {params.version} \
+            -m union \
+            -r \
+            -A {input.anno} \
+            -L False \
+            -i \
+            -o {output.out}
+        """
+
+
+# -------------------------
+# Merge per-sample UTR mappings into a single AnnData before peak calling,
+# so peaks are called jointly across all biological samples.
+# -------------------------
+rule merge_utr_mappings:
+    input:
+        expand(f"{UTR_DIR}/{{sample}}_raw.h5ad", sample=SAMPLES),
+    output:
+        f"{UTR_DIR}/merged_raw.h5ad",
+    conda:
+        "downstr"
+    shell:
+        """
+        python {workflow.basedir}/scripts/merge_utr_mappings.py \
+            {input} \
+            -o {output}
+        """
+
+
+# -------------------------
+# Peak calling and filtering (on the merged object)
+# -------------------------
+rule call_peaks:
+    input:
+        f"{UTR_DIR}/merged_raw.h5ad",
+    output:
+        f"{UTR_DIR}/merged_bw12.h5ad",
+    params:
+        out_prefix=f"{UTR_DIR}/merged",
+        bw=config["utrcalling"]["kde_bandwidth"],
+    threads: 26
+    conda:
+        "utrcalling"
+    shell:
+        """
+        utrcalling call-peaks-different-bandwidths {input} {params.out_prefix} -b {params.bw} --cores {threads}
+        """
+
+
+rule trim_peaks:
+    input:
+        f"{UTR_DIR}/merged_bw12.h5ad",
+    output:
+        f"{UTR_DIR}/merged_bw12_above10cts.h5ad",
+    params:
+        threshold=config["utrcalling"]["peak_threshold"],
+        min_counts=config["utrcalling"]["peak_min_counts"],
+    conda:
+        "utrcalling"
+    shell:
+        """
+        utrcalling remove-peaks-below-threshold {input} {output} \
+            -t {params.threshold} -m {params.min_counts}
+        """
+
+
+rule remove_non_apa_utrs:
+    input:
+        f"{UTR_DIR}/merged_bw12_above10cts.h5ad",
+    output:
+        f"{UTR_DIR}/merged_bw12_above10cts_apa.h5ad",
+    conda:
+        "utrcalling"
+    shell:
+        """
+        utrcalling select-alternative-transcription-events {input} {output}
+        """
+
+
+rule rename_peaks:
+    input:
+        f"{UTR_DIR}/merged_bw12_above10cts_apa.h5ad",
+    output:
+        f"{UTR_DIR}/merged_bw12_above10cts_apa_named.h5ad",
+    conda:
+        "utrcalling"
+    shell:
+        """
+        utrcalling generate-names {input} {output} -u utr_name -g gene_name
+        """
+
+
+rule counts_to_percentages:
+    input:
+        f"{UTR_DIR}/merged_bw12_above10cts_apa_named.h5ad",
+    output:
+        f"{UTR_DIR}/merged_bw12_above10cts_apa_named_percentages.h5ad",
+    conda:
+        "utrcalling"
+    shell:
+        """
+        utrcalling counts-to-percentages {input} {output} -u utr_name
+        """
+
+
+# =========================================================================
+# Cell-level annotation (joins Zenodo metadata onto each h5ad by (library,
+# barcode). Preserves sparse X — only .obs is modified.)
+# =========================================================================
+rule annotate_cells:
+    input:
+        h5ad="{prefix}.h5ad",
+        metadata=f"{METADATA_DIR}/metadata.tsv",
+    output:
+        "{prefix}_annotated.h5ad",
+    wildcard_constraints:
+        prefix=r".+(?<!_annotated)",
+    conda:
+        "downstr"
+    shell:
+        """
+        python {workflow.basedir}/scripts/annotate_h5ad.py \
+            {input.h5ad} \
+            --metadata {input.metadata} \
+            -o {output}
+        """

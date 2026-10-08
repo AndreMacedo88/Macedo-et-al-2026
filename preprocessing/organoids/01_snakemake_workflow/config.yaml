@@ -1,0 +1,27 @@
+samples: "samples.tsv"
+
+genome:
+  gtf: "${M26_DATA_ROOT}/common_files/annotations/Homo_sapiens.GRCh38.104.gtf"
+
+cellranger:
+  transcriptome: "${M26_DATA_ROOT}/common_files/GRCh38_custom"
+  expect_cells: 5000
+  cores: 27
+  mem_gb: 64
+
+utrcalling:
+  protocol_platform: "standard_10x"
+  protocol_version: 3
+  feature: "three_prime_utr"
+  summarization_level: "gene"
+  kde_bandwidth: 12
+  peak_min_counts: 10
+  peak_threshold: 0.05
+
+metadata:
+  zenodo_url: "https://zenodo.org/api/records/8074791/files/metadata.tsv/content"
+
+paths:
+  project_dir: "${M26_DATA_ROOT}/3utr/organoids/knoblich"
+  o_drive: "${M26_DATA_ROOT}/raw/organoids_knoblich"
+  ena_ftp_base: "ftp.sra.ebi.ac.uk/vol1/run/ERR116"

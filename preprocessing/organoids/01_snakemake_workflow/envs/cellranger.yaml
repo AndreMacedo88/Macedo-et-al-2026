@@ -1,0 +1,7 @@
+name: cellranger
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - cellranger=8.0.1

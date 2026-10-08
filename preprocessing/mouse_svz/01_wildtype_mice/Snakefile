@@ -1,0 +1,236 @@
+import os
+
+DATA_ROOT = os.environ["M26_DATA_ROOT"]  # data directory (see README)
+
+
+def _expand_env(value):
+    """Expand ${M26_DATA_ROOT} in config values."""
+    if isinstance(value, str):
+        return os.path.expandvars(value)
+    if isinstance(value, dict):
+        return {k: _expand_env(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_expand_env(v) for v in value]
+    return value
+
+import pathlib
+import re
+
+
+configfile: os.path.join(workflow.basedir, "config.yaml")
+config.update(_expand_env(dict(config)))
+
+
+def get_inputs(folders_path):
+    file_list = []
+    dir_dict = {}
+    for path in pathlib.Path(folders_path).rglob("*.fastq.gz"):
+        id_name = re.match(f"{folders_path}/.*/fastq/(.*)_R\d\.fastq", str(path))
+        if id_name is None:
+            continue
+        file_list.append(id_name.group(1))
+    dir_dict[folders_path.split("/")[-1]] = list(set(file_list))
+    return dir_dict, file_list
+
+
+EXPERIMENTS_DICT, ALL_IDS, SAMPLES_DICT = {}, [], {}
+
+for path_ in expand(
+    f"{config['dir_data']}{{data_dirs}}", data_dirs=config["experiments"]
+):
+    experiment, id = get_inputs(path_)
+    EXPERIMENTS_DICT.update(experiment)
+    ALL_IDS.append(id)
+
+ALL_IDS = list(set([file_ for sublist in ALL_IDS for file_ in sublist]))
+
+for k, v in EXPERIMENTS_DICT.items():
+    for x in v:
+        SAMPLES_DICT.setdefault(x, []).append(k)
+
+
+rule all:
+    input:
+        *[
+            expand(
+                "{dir_}wildtypes_analysis/cellranger/{sample_id}_{data_dirs}/outs/molecule_info.h5",
+                dir_=config["dir_data"],
+                data_dirs=experiment,
+                sample_id=EXPERIMENTS_DICT[experiment],
+            )
+            for experiment in config["experiments"]
+        ],
+        expand(
+            "{dir_}wildtypes_analysis/data/{sample_id}.sorted.bam",
+            dir_=config["dir_data"],
+            sample_id=ALL_IDS,
+        ),
+        expand(
+            "{dir_}wildtypes_analysis/data/{sample_id}.sorted.bam.bai",
+            dir_=config["dir_data"],
+            sample_id=ALL_IDS,
+        ),
+        f"{config['dir_data']}wildtypes_analysis/stats/mapping_wildtypes.csv",
+
+
+rule star_index:
+    input:
+        fasta="{'dir_common'}genomes/Mus_musculus.GRCm38.dna.primary_assembly.fa",
+        gtf="{'dir_common'}annotations/Mus_musculus.GRCm38.102.gtf",
+    output:
+        "{'dir_common'}indices/genomeParameters.txt",
+    threads: 28
+    params:
+        genome_dir="{'dir_common'}indices/",
+    conda:
+        "envs/mapping.yaml"
+    shell:
+        "STAR --runThreadN {threads} "
+        "--runMode genomeGenerate "
+        "--genomeDir {params.genome_dir} "
+        "--genomeFastaFiles {input.fasta} "
+        "--sjdbGTFfile {input.gtf} "
+        "--sjdbOverhang 100 "
+
+
+def star_map_inputs_r1(wildcards):
+    return expand(
+        "{{dir_}}{data_dir}/{{sample_id}}/fastq/{{sample_id}}_R1.fastq.gz",
+        data_dir=SAMPLES_DICT[wildcards.sample_id],
+    )
+
+
+def star_map_inputs_r2(wildcards):
+    return expand(
+        "{{dir_}}{data_dir}/{{sample_id}}/fastq/{{sample_id}}_R2.fastq.gz",
+        data_dir=SAMPLES_DICT[wildcards.sample_id],
+    )
+
+
+rule star_map:
+    input:
+        r1=star_map_inputs_r1,
+        r2=star_map_inputs_r2,
+        index=f"{config['dir_common']}indices/genomeParameters.txt",
+    output:
+        "{dir_}wildtypes_analysis/{sample_id}/Aligned.sortedByCoord.out.bam",
+        "{dir_}wildtypes_analysis/{sample_id}/Log.final.out",
+        "{dir_}wildtypes_analysis/{sample_id}/Log.out",
+        "{dir_}wildtypes_analysis/{sample_id}/Log.progress.out",
+        "{dir_}wildtypes_analysis/{sample_id}/SJ.out.tab",
+    threads: 28
+    params:
+        basename="{dir_}wildtypes_analysis/{sample_id}/",
+        index=f"{config['dir_common']}indices/",
+    conda:
+        "envs/mapping.yaml"
+    # As originally run, the strings for --outFilterMismatchNmax, --outFilterMismatchNoverReadLmax and
+    # --chimOutType lacked separating spaces, so STAR applied only --outFilterMismatchNmax 15 and kept the
+    # defaults for the other two (checked in the STAR Log.out files). The command below states the
+    # parameters that were in effect.
+    shell:
+        "STAR "
+        "--runThreadN {threads} "
+        "--genomeDir {params.index} "
+        "--outFileNamePrefix {params.basename} "
+        "--outSAMtype BAM SortedByCoordinate "
+        "--outSAMattributes All "
+        "--outSAMunmapped Within "
+        "--bamRemoveDuplicatesType UniqueIdentical "
+        "--outFilterMatchNminOverLread 0.2 "
+        "--outFilterScoreMinOverLread 0.3 "
+        "--outFilterMismatchNmax 15 "
+        "--readFilesCommand zcat "
+        "--readFilesIn {input.r1} {input.r2} "
+
+
+rule mapping_rate:
+    input:
+        star=expand(
+            "{dir_}wildtypes_analysis/{sample_id}/Log.final.out",
+            dir_=config["dir_data"],
+            sample_id=ALL_IDS,
+        ),
+    params:
+        ids=ALL_IDS,
+    output:
+        csv="{dir_}wildtypes_analysis/stats/mapping_wildtypes.csv",
+    run:
+        import pandas as pd
+
+        data = pd.DataFrame({"id": params["ids"], "star_mapfile": input.star})
+        data["data"] = list(
+            map(partial(pd.read_csv, sep="\t", header=None), data["star_mapfile"])
+        )
+        data["data"] = list(map(lambda x: x[~x[1].isna()], data.data))
+        data["data"] = list(
+            map(
+                lambda x: {k.strip(" |"): v.strip("%") for (k, v) in zip(x[0], x[1])},
+                data.data,
+            )
+        )
+        data = data.join(pd.DataFrame(list(data.data)))
+        data.drop(columns="data").to_csv(output.csv, index=False)
+
+
+rule samtools_index:
+    input:
+        "{dir_}wildtypes_analysis/{sample_id}/Aligned.sortedByCoord.out.bam",
+    output:
+        "{dir_}wildtypes_analysis/{sample_id}/Aligned.sortedByCoord.out.bam.bai",
+    conda:
+        "envs/mapping.yaml"
+    shell:
+        "samtools index {input}"
+
+
+rule symlink_named_for_cellranger:
+    input:
+        "{dir_}{data_dirs}/{sample_id}/fastq/{sample_id}_R{read_number}.fastq.gz",
+    output:
+        "{dir_}{data_dirs}/{sample_id}/fastq/{sample_id}_S1_L001_R{read_number}_001.fastq.gz",
+    shell:
+        "ln -s {input} {output}"
+
+
+rule count:
+    input:
+        expand(
+            "{{dir_}}{{data_dirs}}/{{sample_id}}/fastq/{{sample_id}}_S1_L001_R{read_number}_001.fastq.gz",
+            read_number=[1, 2],
+        ),
+        inpt="{dir_}{data_dirs}/{sample_id}/fastq/",
+    params:
+        transcriptome=config["dir_transcriptome"],
+        out="{dir_}wildtypes_analysis/cellranger/",
+    threads: 28
+    output:
+        "{dir_}wildtypes_analysis/cellranger/{sample_id}_{data_dirs}/outs/molecule_info.h5",
+    shell:
+        "mkdir -p {params.out}; "
+        "cd {params.out}; "
+        "cellranger count "
+        "--id={wildcards.sample_id}_{wildcards.data_dirs} "
+        "--transcriptome={params.transcriptome} "
+        "--fastqs={input.inpt} "
+        "--no-bam "
+
+
+rule move_bams:
+    input:
+        "{dir_}wildtypes_analysis/{sample_id}/Aligned.sortedByCoord.out.bam",
+    output:
+        "{dir_}wildtypes_analysis/data/{sample_id}.sorted.bam",
+    shell:
+        "mv {input} {output} && "
+        "ln -s {output} {input}"
+
+
+rule move_bais:
+    input:
+        "{dir_}wildtypes_analysis/{sample_id}/Aligned.sortedByCoord.out.bam.bai",
+    output:
+        "{dir_}wildtypes_analysis/data/{sample_id}.sorted.bam.bai",
+    shell:
+        "mv {input} {output} && "
+        "ln -s {output} {input}"

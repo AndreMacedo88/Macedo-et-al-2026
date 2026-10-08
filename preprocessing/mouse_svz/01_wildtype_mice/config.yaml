@@ -1,0 +1,4 @@
+dir_data: "${M26_DATA_ROOT}/3utr/"
+dir_common: "${M26_DATA_ROOT}/common_files/"
+experiments: ['IFNAGRKO', 'IFNGRKO', 'svztrace', 'oldvsyoung']
+dir_transcriptome: "${M26_DATA_ROOT}/references/refdata-gex-mm10-2020-A/"

@@ -1,0 +1,1 @@
+﻿barcode,batch_number,name_old,dir_name,sample_id,n_genes_by_counts,total_counts,total_counts_mt,pct_counts_mt,n_genes,doublet_score,predicted_doublet,n_counts,S_score,G2M_score,phase,dbscan_clusters,dpt_pseudotime,leiden,celltype

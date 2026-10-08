@@ -1,0 +1,8 @@
+mouse_gtf: "${M26_DATA_ROOT}/common_files/annotations/Mus_musculus.GRCm38.102.gtf.gz"
+anno_csv_v2_1: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/anno_6wt_v2_1.csv"
+anno_csv_v2_2: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/anno_6wt_v2_2.csv"
+anno_csv_v3_3: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/anno_6wt_v3_3.csv"
+anno_csv_v3_4: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/anno_6wt_v3_4.csv"
+anno_csv_v3_5: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/anno_6wt_v3_5.csv"
+anno_csv_v3_6: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/anno_6wt_v3_6.csv"
+results_dir: "${M26_DATA_ROOT}/3utr/wildtypes_analysis/"
