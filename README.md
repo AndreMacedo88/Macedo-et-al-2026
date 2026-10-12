@@ -15,14 +15,16 @@ preprocessing/   raw reads -> count matrices, cell annotation, pseudotime
   mouse_svz/       STAR + Cell Ranger, expression analysis, 3'-end workflows, site-level integration
   organoids/       download + Cell Ranger + 3'-end workflow, lineages and pseudotime
   blood/           STAR + 3'-end workflow, gene-level count table
+  cortex/          3'UTR regions, Cell Ranger, 3'-end positions per molecule (post-mortem cortex)
 analysis/        statistics behind the reported numbers
   mouse_svz/       Dirichlet-multinomial test, permutation and pseudobulk calibration, effect sizes, enrichment
   organoids/pseudotime/     developmental contrast (same tests as the mouse data)
   organoids/perturbation/   perturbation contrast, enrichment, overlap with the developmental contrast
   blood/           differential site usage, classifiers, within-family analyses
+  cortex/          3'UTR lengths per cell type, per-gene models, gene-set enrichment
   pas_distance/    distance of poly(A) sites to the polyadenylation signal, mouse and organoids (Fig. 1B)
 figures/         one notebook per figure panel (or group of panels)
-  fig1/  fig2/development/  fig2/perturbation/  fig4/
+  fig1/  fig2/development/  fig2/perturbation/  fig3/  fig4/
   style/           shared plotting style and constants (Python and R)
 src/             shared helper module (distance of sites to the polyadenylation signal)
 environment/     conda environment files
@@ -67,6 +69,8 @@ Below `M26_DATA_ROOT`, the code expects the directory structure of the server on
 | Mouse cell multiplexing (hashtag) assignment, batches 3 and 4 | [[deposited with the GEO record]] | `external/hto_assignment.csv` |
 | Organoid raw reads and metadata | ArrayExpress E-MTAB-13148, Zenodo 8074791 (downloaded by `preprocessing/organoids/01_snakemake_workflow`) | `raw/organoids_knoblich/`, `3utr/organoids/knoblich/` |
 | Blood raw reads, count matrices and participant metadata | controlled access, [[repository and accession]] | `raw/blood/`, `3utr/Blood/` |
+| Post-mortem cortex raw reads (Velmeshev et al. 2019) | Sequence Read Archive PRJNA434002 | downloaded per run |
+| Post-mortem cortex, processed: 3'UTR regions, per-molecule positions, run and cell annotations, stored results of the analysis | [[Zenodo record of the processed files]] | `copied_manuel_data/Mapping_3UTR_10X/` (`threeUTR_human.rda` [[copy it here from the 2019 analysis folder before depositing]], `prefrontal_cortex.rda`, `anterior_cortex.rda`, `srr_annotation.csv`, `cell_annotation.csv`, `utr_per_cell_type_matrix.rda`, `asd_utr_data.rda`, `meta_utr_asd_.rda`, `asd_pathway.rda`) |
 | Reference genomes and annotations | Ensembl release 102 (GRCm38) and 104 (GRCh38); 10x Genomics `refdata-gex-mm10-2020-A` | `common_files/genomes/`, `common_files/annotations/`, `common_files/indices/`, `common_files/GRCh38_custom`, `references/` |
 | Gene annotations | SFARI Gene (release 2026-03-22); Ensembl BioMart mouse-human orthologues | `common_files/annotations/` |
 
@@ -122,13 +126,21 @@ Activate the environment named in each step. Shell runners take their settings f
 
 ### Post-mortem cortex (Fig. 3)
 
-[[Code for Fig. 3 is not included yet.]]
+The 3'UTR lengths are estimated from the 3' ends of the read alignments (standard 10x chemistry, no poly(A) site calling). The preprocessing steps were run in 2019 on Cell Ranger alignments that are no longer available; their outputs (the 3'UTR regions and the per-molecule positions) are deposited, and the analysis steps start from them.
+
+1. `preprocessing/cortex/01-261012-utr_reference.R`: 3'UTR regions from TxDb.Hsapiens.UCSC.hg38.knownGene (the TxDb version used in 2019 was not recorded; use the deposited `threeUTR_human.rda` to reproduce the paper).
+2. `preprocessing/cortex/02-cellranger_count.sh`: Cell Ranger 2.2.0, reference refdata-cellranger-GRCh38-3.0.0, one run per library.
+3. `preprocessing/cortex/03-261012-read_3utr_positions.R`: 3'-end position of every molecule per 3'UTR region and nucleus, once per brain region.
+4. `analysis/cortex/` in numbered order (`apa-r`): `01` lengths per gene, sample and cell type and the per-cell-type means of Fig. 3B; `02` per-gene models; `03` gene-set enrichment of Fig. 3E. Each script takes `--outdir` (default `M26_RESULTS_ROOT/cortex`).
+5. `figures/fig3/fig3_cortex_tables` (`apa-r`) reads the results of step 4 (set `M26_CORTEX_RESULTS` to that folder; by default it reads the stored results), runs the per-cell-type t-tests of Fig. 3B, and writes the tables that `figures/fig3/fig3_cortex_panels` (`apa-python`) plots.
+
+Steps 1 to 3 need GenomicFeatures, GenomicAlignments, Rsamtools and the TxDb package in addition to `apa-r`. Run on the deposited per-molecule positions, step 4 reproduces the stored per-gene lengths and Fig. 3B values exactly and the per-gene P values to within 3e-8. The enrichment of step 3 depends on the Reactome release: the current release tests more pathways than the 2020 one, and Fig. 3E shows the stored 2020 result (see the header of `03-261012-gsea_l23.R`).
 
 ## Figure panels
 
 | Panel | Notebook (`figures/` unless stated) |
 |---|---|
-| Fig. 1A, Fig. 4A | schematics, no code |
+| Fig. 1A, Fig. 3A, Fig. 4A | schematics, no code |
 | Fig. 1B | `fig1/fig1b_pas_distance` |
 | Fig. 1C | `fig1/fig1c_proportions_umap` |
 | Fig. 1D | `fig1/fig1d_volcano_rhoW` |
@@ -158,6 +170,7 @@ Activate the environment named in each step. Shell runners take their settings f
 | fig. S3A to S3D | `fig2/perturbation/supp_1_dataset_design` |
 | fig. S3E, S3F | `fig2/perturbation/unassigned_panels` |
 | fig. S3H | `fig2/perturbation/supp_3_full_enrichment` |
+| Fig. 3B to 3E | `fig3/fig3_cortex_panels` (after `fig3/fig3_cortex_tables`) |
 | Fig. 4B | `fig4/fig5b_dtu_volcano` |
 | Fig. 4C | `fig4/fig5d_classifier` |
 | Fig. 4D, 4E | `fig4/supp_8_within_family_drimseq` |
