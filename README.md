@@ -26,6 +26,7 @@ analysis/        statistics behind the reported numbers
 figures/         one notebook per figure panel (or group of panels)
   fig1/  fig2/development/  fig2/perturbation/  fig3/  fig4/
   style/           shared plotting style and constants (Python and R)
+tables/          supplementary tables
 src/             shared helper module (distance of sites to the polyadenylation signal)
 environment/     conda environment files
 ```
@@ -96,6 +97,7 @@ Activate the environment named in each step. Shell runners take their settings f
    - `13`: transcriptome vs 3'UTRome (Fig. 1H; it also runs the enrichment of fig. S1K).
    - `14`: confidence intervals of Fig. 1H.
 6. Figure notebooks in `figures/fig1/`. Fig. 1B needs the distance analysis below.
+7. Table S1 (all Gene Ontology terms tested for Fig. 1F): `tables/table_s1_go_enrichment.R` (`apa-r`) exports the result of `analysis/mouse_svz/09` and checks it against the values in the Results; `tables/table_s1_xlsx.py` (`apa-python`) writes the Excel file. Both write to `M26_RESULTS_ROOT/tables/`.
 
 ### Organoids (Fig. 2, figs. S2 and S3)
 
