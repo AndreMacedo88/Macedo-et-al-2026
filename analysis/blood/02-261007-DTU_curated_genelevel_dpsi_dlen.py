@@ -17,7 +17,7 @@ Purpose
     All 8,338 genes are reported (2 genes are NaN: no counts in one diagnosis group).
 
 Supports
-    Fig. 4B (volcano x-axis and direction of the 81 DTU genes) and fig. S4C; also read by
+    Fig. 4B (volcano x-axis and direction of the 81 DTU genes) and fig. S6C; also read by
     figures/fig4/fig5c_convergence.ipynb and analysis/blood/07-260615-within_family_systematic_apa.ipynb.
 
 Inputs

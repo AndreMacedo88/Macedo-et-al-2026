@@ -9,7 +9,7 @@ Purpose
     Collections (in this order): Reactome, GO_BP, Hallmark, KEGG.
 
 Supports
-    Fig. 2H (convergent / lineage-specific perturbation pathways) and fig. S3H.
+    Fig. 2H (convergent / lineage-specific perturbation pathways) and fig. S5H.
 
 Provenance
     Ported on 2026-10-07 from an earlier R script that wrote

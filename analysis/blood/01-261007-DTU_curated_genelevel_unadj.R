@@ -17,7 +17,7 @@
 #   (2,217 genes with a finite P).
 #
 # Supports
-#   Fig. 4B (blood DTU volcano; 81-gene signature) and fig. S4C (gene groups). The
+#   Fig. 4B (blood DTU volcano; 81-gene signature) and fig. S6C (gene groups). The
 #   sex-adjusted and composition-adjusted fits are sensitivity checks not shown in the paper. Read by
 #   figures/fig4/fig5c_convergence.ipynb, analysis/blood/07-260615-within_family_systematic_apa.ipynb,
 #   figures/fig4/fig5b_dtu_volcano.ipynb. Delta-psi / delta-length per gene

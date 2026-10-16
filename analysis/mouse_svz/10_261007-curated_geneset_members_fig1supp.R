@@ -1,8 +1,8 @@
-# Curated functional gene-set membership for fig. S1I (mouse adult SVZ, optimized method 2)
+# Curated functional gene-set membership for fig. S3A (mouse adult SVZ, optimized method 2)
 #
 # Purpose:
 #   Define the three curated functional gene sets whose mean 3'UTR-length index W(t) is
-#   plotted along pseudotime in fig. S1I (figures/fig1/supp_4_exemplars_genesets.ipynb,
+#   plotted along pseudotime in fig. S3A (figures/fig1/supp_4_exemplars_genesets.ipynb,
 #   cell "S4b"). Each set is the union of the ORA foreground genes (geneID column) of the
 #   curated GO BP terms shown in the Fig. 1 biological-process panel
 #   (Fig. 1F, figures/fig1/fig1f_bp_enrichment.ipynb, `curated_bio`), taken from the base chi-square-only GO
@@ -15,7 +15,7 @@
 #     Proteostasis     (156 genes): ubiquitin-dependent protein catabolic process;
 #                                   cytoplasmic translation
 #
-# Supports: fig. S1I (functional gene-set W(t) trajectories).
+# Supports: fig. S3A (functional gene-set W(t) trajectories).
 #
 # Input:
 #   DirMult_optimized/ORA/ora_go_neglog10pval_chisq_optimized2.rds

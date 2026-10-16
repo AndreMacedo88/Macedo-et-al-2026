@@ -25,8 +25,8 @@
 #   The mouse chi-sq LRT is already well calibrated (91.6% concordance with
 #   the parametric bootstrap in an earlier QC notebook), so for mouse the
 #   permutation analysis is run for parity with the organoid analysis: the
-#   comparison of tests is shown for both datasets (fig. S1B, S1C for mouse;
-#   fig. S2B, S2C for the organoids). The organoid script header explains
+#   comparison of tests is shown for both datasets (fig. S1, B and C for mouse;
+#   fig. S4, B and C for the organoids). The organoid script header explains
 #   the motivation (cell-level pseudoreplication); for mouse the test is run
 #   for completeness.
 #

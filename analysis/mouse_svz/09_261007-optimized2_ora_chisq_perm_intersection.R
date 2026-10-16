@@ -8,7 +8,7 @@
 #   (08_260411-optimized2_enrichment_analyses.ipynb, chi-square-only ORA), except that the
 #   foreground is the intersection and all terms are kept (pvalueCutoff = 1).
 #
-# Supports: Fig. 1F (GO BP) and fig. S1J (Reactome, KEGG, Hallmark).
+# Supports: Fig. 1F (GO BP) and fig. S3B (Reactome, KEGG, Hallmark).
 #
 # Inputs:
 #   DirMult_optimized/dirmult_regression_optimized2_joint_df5.csv
